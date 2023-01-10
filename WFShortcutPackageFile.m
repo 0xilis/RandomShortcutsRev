@@ -41,7 +41,15 @@ if (auth) {
        if (pathList) {
         AAArchiveStream archiveStream = AAEncodeArchiveOutputStreamOpen(outputStream, 0, 0, 0, 0);
         if (archiveStream) {
-         //continue later
+         if (AAArchiveStreamWritePathList(archiveStream,pathList, fieldKeySet, [directoryStructure fileSystemRepresentation], 0, 0, 0, 0)) {
+          //error
+         } else {
+          AAArchiveStreamClose(archiveStream);
+          AAByteStreamClose(outputStream);
+          AAByteStreamClose(byteStream);
+          [WFFileRepresentation fileWithURL:daURL options:0x3 ofType:0x0 proposedFileName:[self sanitizedName]];
+          [[self fileManager]removeItemAtURL:daURL error:0];
+         }
         }
        }
       }
