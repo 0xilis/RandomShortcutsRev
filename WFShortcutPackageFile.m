@@ -33,7 +33,8 @@ if (auth) {
       //error
      } else {
       AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, [data bytes], [data length]);
-      AAByteStream byteStream = AAFileStreamOpenWithPath([[[self temporaryWorkingDirectoryURL] URLByAppendingPathComponent:[self fileName]]fileSystemRepresentation], 0x202, 0x1a4);
+      NSURL *daURL = [[[self temporaryWorkingDirectoryURL] URLByAppendingPathComponent:[self fileName]]fileSystemRepresentation]; //im amazing at var names
+      AAByteStream byteStream = AAFileStreamOpenWithPath(daURL, 0x202, 0x1a4);
       AEAEncryptionOutputStreamOpen(byteStream, context, 0, 0);
       AAFieldKeySet fieldKeySet = AAFieldKeySetCreateWithString("TYP,PAT,LNK,DEV,DAT,MOD,FLG,MTM,BTM,CTM,HLC,CLC");
       if (fieldKeySet) {
