@@ -19,7 +19,7 @@
 id auth = [arg1 generateAuthData]; //WFShortcutSigningContext
 if (auth) {
  NSURL *tempURL = [self temporaryWorkingDirectoryURL];
- id directoryStructure = [self generateDirectoryStructureInDirectory:tempURL error:arg4];
+ id directoryStructure = [self generateDirectoryStructureInDirectory:tempURL error:arg2];
  if (directoryStructure) {
   AEAContext context = AEAContextCreateWithProfile(0);
   if (context) {
