@@ -65,7 +65,7 @@ if (auth) {
  NSData *shortcutData = [self shortcutData];
  if (shortcutData) {
   NSString *daURL = [arg0 URLByAppendingPathComponent:[self directoryName]];
-  if ([self fileManager]createDirectoryAtURL:daURL withIntermediateDirectories:0 attributes:0 error:arg1]) {
+  if ([[self fileManager]createDirectoryAtURL:daURL withIntermediateDirectories:0 attributes:0 error:arg1]) {
     [[self shortcutData] writeToURL:[daURL URLByAppendingPathComponent:@"Shortcut.wflow"] atomically:YES];
   }
  } else {
