@@ -107,6 +107,25 @@ if (auth) {
  if (!context) {
   //error
  }
-  //finish later
+ size_t blobSize = 0;
+ int fieldBlob = AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, 0, 0, &blobSize);
+ if (fieldBlob) {
+  //error
+ }
+ if (blobSize == 0) {
+  //error
+ }
+ uint8_t *tooLazyForGoodVariableNames = (uint8_t *)malloc(blobSize);
+ if (!(AEAContextGetFieldBlob(r13, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, blobSize, tooLazyForGoodVariableNames, 0))) {
+  id context2 = [WFShortcutSigningContext contextWithAuthData:[NSData dataWithBytesNoCopy:tooLazyForGoodVariableNames length:blobSize]];
+  if (context2) {
+   //block
+  } else {
+   //error
+  ]
+ } else {
+  free(tooLazyForGoodVariableNames); //for some reason WorkflowKit only frees the uint8_t here, idk why
+  //error
+ }
 }
 @end
