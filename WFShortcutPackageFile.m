@@ -1,5 +1,7 @@
+#import <Foundation/Foundation.h>
 #import <AppleArchive/AppleArchive.h>
 #import <AppleArchive/AEADefs.h>
+#import "WFShortcutPackageFile.h"
 
 //some things might be slightly innaccurate, not good with rev
 
@@ -71,5 +73,40 @@ if (auth) {
  } else {
   //error
  }
+}
+-(void)extractShortcutFileRepresentationWithSigningMethod:(id)arg0 error:(id)arg1 {
+    [self extractShortcutFileRepresentationWithSigningMethod:arg0 iCloudIdentifier:0 error:arg1];
+    return;
+}
+-(void)extractShortcutFileRepresentationWithError:(id)arg0 {
+    [self extractShortcutFileRepresentationWithSigningMethod:0 error:arg0];
+    return;
+}
+-(void)preformShortcutDataExtractionWithCompletion:(id)arg0 {
+ WFLogSubsystem *daLog = getWFSecurityLogObject();
+ if (os_log_type_enabled(daLog, 0)) {
+  //log
+ }
+ NSData *signedShortcutData = [self signedShortcutData]
+ if (!signedShortcutData) {
+  NSURL *daURL = [self signedShortcutFileURL];
+  if (![self signedShortcutFileURL]) {
+   //error
+  }
+ }
+ AAByteStream byteStream;
+ if (signedShortcutData) {
+  byteStream = AAMemoryInputStreamOpen([signedShortcutData bytes], [signedShortcutData length]);
+ } else {
+  byteStream = AAFileStreamOpenWithPath([[self signedShortcutFileURL] fileSystemRepresentation], 0, 0x1a4);
+ }
+ if (!byteSteam) {
+  //error
+ }
+ AEAContext context = AEAContextCreateWithEncryptedStream(byteStream);
+ if (!context) {
+  //error
+ }
+  //finish later
 }
 @end
