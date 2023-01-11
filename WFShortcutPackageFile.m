@@ -15,7 +15,7 @@
   [daKey setObject:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom forKey:(__bridge id)kSecAttrKeyType];
   [daKey setObject:0x6469b0 forKey:(__bridge id)kSecAttrKeySizeInBits];
   [daKey setObject:@NO forKey:(__bridge id)kSecAttrIsPermanent];
-  [self generateSignedShortcutFileRepresentationWithPrivateKey:log signingContext:[WFShortcutSigningContext contextWithAppleIDAccount:arg0 signingKey:SecKeyCreateRandomKey(daKey, 0)] error:0];
+  [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:[WFShortcutSigningContext contextWithAppleIDAccount:arg0 signingKey:SecKeyCreateRandomKey(daKey, 0)] error:0];
 }
 -(void)generateSignedShortcutFileRepresentationWithPrivateKey:(id)arg0 signingContext:(id)arg1 error:(id)arg2 {
 id auth = [arg1 generateAuthData]; //WFShortcutSigningContext
@@ -119,7 +119,14 @@ if (auth) {
  if (!(AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, blobSize, tooLazyForGoodVariableNames, 0))) {
   id context2 = [WFShortcutSigningContext contextWithAuthData:[NSData dataWithBytesNoCopy:tooLazyForGoodVariableNames length:blobSize]];
   if (context2) {
-   //block
+   [context2 validateWithCompletion:^{
+     id publicKey = [context2 copyPublicKey];
+     if (publicKey) {
+       //finish latr
+     } else {
+      //error
+     }
+   }];
   } else {
    //error
   }
