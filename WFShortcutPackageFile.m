@@ -122,7 +122,7 @@ if (auth) {
    //block
   } else {
    //error
-  ]
+  }
  } else {
   free(tooLazyForGoodVariableNames); //for some reason WorkflowKit only frees the uint8_t here, idk why
   //error
