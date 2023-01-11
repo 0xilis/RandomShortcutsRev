@@ -116,7 +116,7 @@ if (auth) {
   //error
  }
  uint8_t *tooLazyForGoodVariableNames = (uint8_t *)malloc(blobSize);
- if (!(AEAContextGetFieldBlob(r13, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, blobSize, tooLazyForGoodVariableNames, 0))) {
+ if (!(AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, blobSize, tooLazyForGoodVariableNames, 0))) {
   id context2 = [WFShortcutSigningContext contextWithAuthData:[NSData dataWithBytesNoCopy:tooLazyForGoodVariableNames length:blobSize]];
   if (context2) {
    //block
