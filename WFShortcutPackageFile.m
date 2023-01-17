@@ -87,7 +87,7 @@ if (auth) {
  if (os_log_type_enabled(daLog, 0)) {
   //log
  }
- NSData *signedShortcutData = [self signedShortcutData]
+ NSData *signedShortcutData = [self signedShortcutData];
  if (!signedShortcutData) {
   NSURL *daURL = [self signedShortcutFileURL];
   if (![self signedShortcutFileURL]) {
