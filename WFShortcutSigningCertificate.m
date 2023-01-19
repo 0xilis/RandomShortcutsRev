@@ -18,7 +18,7 @@
 -(id)initWithCertificateData:(id)arg0 {
     SecCertificateRef cert = SecCertificateCreateWithData(0, arg0);
     if (cert) {
-            return [r19 initWithCertificate:cert];
+            return [self initWithCertificate:cert];
     }
     return 0;
 }
