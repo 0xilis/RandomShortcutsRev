@@ -8,5 +8,4 @@
 -(id)initWithCertificate:(struct __SecCertificate *)arg0 ;
 -(id)initWithCertificateData:(id)arg0 ;
 -(struct __SecKey *)copyPublicKey;
--(void)dealloc;
 @end
