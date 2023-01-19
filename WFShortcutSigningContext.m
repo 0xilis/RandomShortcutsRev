@@ -35,4 +35,21 @@
   return [self signingPublicKey];
  }
 }
+-(id)initWithAppleIDValidationRecord:(id)arg0 appleIDCertificateChain:(id)arg1 signingPublicKey:(struct __SecKey *)arg2 signingPublicKeyData:(id)arg3 {
+ self = [super init];
+ if (self) {
+  self.appleIDValidationRecord = arg0;
+  self.appleIDCertificateChain = arg1;
+  self.signingPublicKey = arg2;
+  self.signingPublicKeySignature = arg3;
+ }
+ return self;
+}
+-(id)initWithSigningCertificateChain:(id)arg0 {
+    self = [super init];
+    if ((self) && ([arg0 count])) {
+            self.signingCertificateChain = arg0;
+    }
+    return self;
+}
 @end
