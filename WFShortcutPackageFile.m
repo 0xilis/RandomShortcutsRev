@@ -11,11 +11,12 @@
   //the arg0 passed in is by [WFP2PSignedShortcutFileExporter exportWorkflowWithCompletion:] and it's value is [SFAppleIDClient myAccountWithError:notimportant]
   //SDAppleIDClient is from the Sharing.framework PrivateFramework
   id log = getWFSecurityLogObject();
-  NSMutableDictionary *daKey = [NSMutableDictionary dictionary];
+  NSMutableDictionary *mutableDict = [NSMutableDictionary dictionary];
   [daKey setObject:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom forKey:(__bridge id)kSecAttrKeyType];
   [daKey setObject:0x6469b0 forKey:(__bridge id)kSecAttrKeySizeInBits];
   [daKey setObject:@NO forKey:(__bridge id)kSecAttrIsPermanent];
-  [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:[WFShortcutSigningContext contextWithAppleIDAccount:arg0 signingKey:SecKeyCreateRandomKey(daKey, 0)] error:0];
+  SecKeyRef daKey = SecKeyCreateRandomKey(mutableDict, 0)
+  [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:[WFShortcutSigningContext contextWithAppleIDAccount:arg0 signingKey:daKey] error:0];
 }
 -(void)generateSignedShortcutFileRepresentationWithPrivateKey:(id)arg0 signingContext:(id)arg1 error:(id)arg2 {
 id auth = [arg1 generateAuthData]; //WFShortcutSigningContext
@@ -34,7 +35,7 @@ if (auth) {
      if (AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_SIGNING_PRIVATE_KEY, AEA_CONTEXT_FIELD_REPRESENTATION_X963, [data bytes], [data length])) {
       //error
      } else {
-      AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, [data bytes], [data length]);
+      AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, [auth bytes], [auth length]);
       NSURL *daURL = [[[self temporaryWorkingDirectoryURL] URLByAppendingPathComponent:[self fileName]]fileSystemRepresentation]; //im amazing at var names
       AAByteStream byteStream = AAFileStreamOpenWithPath(daURL, 0x202, 0x1a4);
       AEAEncryptionOutputStreamOpen(byteStream, context, 0, 0);
