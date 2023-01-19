@@ -35,7 +35,7 @@ if (auth) {
      if (AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_SIGNING_PRIVATE_KEY, AEA_CONTEXT_FIELD_REPRESENTATION_X963, [data bytes], [data length])) {
       //error
      } else {
-      AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, [auth bytes], [auth length]);
+      AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, [auth bytes], [auth length]);
       NSURL *daURL = [[[self temporaryWorkingDirectoryURL] URLByAppendingPathComponent:[self fileName]]fileSystemRepresentation]; //im amazing at var names
       AAByteStream byteStream = AAFileStreamOpenWithPath(daURL, 0x202, 0x1a4);
       AEAEncryptionOutputStreamOpen(byteStream, context, 0, 0);
