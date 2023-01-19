@@ -26,18 +26,18 @@ So first let's get into importing contact signed shortcuts. The method -[WFShort
 
 Method 1:
 
--Copy Apple ID DSID to a fake SFAppleIDClient. Private Sharing won't even be needed to import since shortcuts just thinks it's from the user themselves (and if you have the DSID, it should be).
--Resign with the fake SFAppleIDClient. 
--Profit
+- Copy Apple ID DSID to a fake SFAppleIDClient. Private Sharing won't even be needed to import since shortcuts just thinks it's from the user themselves (and if you have the DSID, it should be).
+- Resign with the fake SFAppleIDClient. 
+- Profit
 
 Method 2:
 
--Don't fake appleIDValidationRecord
--Get phone or email associated with Apple ID
--Hash it (SHA256).
--Copy user's hashes to a fake SFAppleIDClient
--Resign with the fake SFAppleIDClient. 
--Profit
+- Don't fake appleIDValidationRecord
+- Get phone or email associated with Apple ID
+- Hash it (SHA256).
+- Copy user's hashes to a fake SFAppleIDClient
+- Resign with the fake SFAppleIDClient. 
+- Profit
 
 Theoretically this *should* work. If you have WorkflowKit access (though I believe under normal circumstances this requires an entitlement) then to resign you can call generateSignedShortcutFileRepresentationWithAccount: with the fake SFAppleIDClient, if not, it's a pain but theoretically you can just replicate it. I do have some of that method rev'd here but be aware that it's not fully rev'd, so you'd need to expand upon it.
 
