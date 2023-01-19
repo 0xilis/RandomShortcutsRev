@@ -1,5 +1,4 @@
 @interface WFShortcutPackageFile : NSObject
-
 @property (readonly, nonatomic) NSString *directoryName;
 @property (readonly, nonatomic) NSObject<OS_dispatch_queue> *executionQueue;
 @property (readonly, nonatomic) NSFileManager *fileManager;
@@ -10,7 +9,6 @@
 @property (retain, nonatomic) NSData *signedShortcutData;
 @property (readonly, nonatomic) NSURL *signedShortcutFileURL;
 @property (readonly, nonatomic) NSURL *temporaryWorkingDirectoryURL;
-
 -(id)extractShortcutFileRepresentationWithError:(*id)arg0;
 -(id)extractShortcutFileRepresentationWithSigningMethod:(*long)arg0 error:(*id)arg1;
 -(id)extractShortcutFileRepresentationWithSigningMethod:(*long)arg0 iCloudIdentifier:(*id)arg1 error:(*id)arg2;
@@ -23,5 +21,4 @@
 -(void)commonInit;
 -(void)extractShortcutFileRepresentationWithCompletion:(id)arg0;
 -(void)preformShortcutDataExtractionWithCompletion:(id)arg0;
-
 @end
