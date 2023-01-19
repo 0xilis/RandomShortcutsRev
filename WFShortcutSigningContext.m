@@ -1,4 +1,4 @@
-
+@implementation WFShortcutSigningContext
 -(id)generateAuthData {
  NSArray* certChain = [self signingCertificateChain];
  if ([certChain count]) {
@@ -20,3 +20,4 @@
    }
  }
 }
+@end
