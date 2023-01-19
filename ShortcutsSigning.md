@@ -22,4 +22,23 @@ As far as contact signing goes I've looked into it more.
 
 So first let's get into importing contact signed shortcuts. The method -[WFShortcutSigningContext validateAppleIDValidationRecordWithCompletion:]: validates that the shortcut is shared from a contact. SFAppleIDClient, from privateframework sharing.framework is used (though actually only SFAppleIDAccount), as it uses [SFAppleIDClient myAccountWithError:]). The method first checks [[[[[SFAppleIDClient alloc]init]myAccountWithError:nil]altDSID]isEqualToString:[self appleIDValidationRecord]]. Aka, if the DSID of the apple account matches up with the contact signed shortcut, it will allow importing of the shortcut. It doesn't even check if private sharing is enabled since it just assumes that since DSID is the same it's from the user and not a contact. If not, all hope is not lost! Checks if private sharing is enabled, and if so, checks valid phone hashes / email hashes associated with SFAppleIDClient (the hashes are SHA256). If hash match, allow import of contact signed shortcut.
 
-to be continued
+# Passing [WFShortcutSigningContext validateAppleIDValidationRecordWithCompletion:]:
+
+Method 1:
+
+-Copy Apple ID DSID to a fake SFAppleIDClient. Private Sharing won't even be needed to import since shortcuts just thinks it's from the user themselves (and if you have the DSID, it should be).
+-Resign with the fake SFAppleIDClient. 
+-Profit
+
+Method 2:
+
+-Don't fake appleIDValidationRecord
+-Get phone or email associated with Apple ID
+-Hash it (SHA256).
+-Copy user's hashes to a fake SFAppleIDClient
+-Resign with the fake SFAppleIDClient. 
+-Profit
+
+Theoretically this *should* work. If you have WorkflowKit access (though I believe under normal circumstances this requires an entitlement) then to resign you can call generateSignedShortcutFileRepresentationWithAccount: with the fake SFAppleIDClient, if not, it's a pain but theoretically you can just replicate it. I do have some of that method rev'd here but be aware that it's not fully rev'd, so you'd need to expand upon it.
+
+To be continued if/when I ever decide to look into iCloud signed shortcuts, or correct an innaccuracy above.
