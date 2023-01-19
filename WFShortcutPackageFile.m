@@ -161,4 +161,15 @@ if (auth) {
  }
  return self;
 }
+-(void)commonInit
+ self.temporaryWorkingDirectoryURL = [WFTemporaryFileManager createTemporaryDirectoryWithFilename:[[NSUUID UUID]UUIDString]];
+ self.fileManager = [NSFileManager defaultManager];
+ [[self fileManager] createDirectoryAtURL:[self temporaryWorkingDirectoryURL] withIntermediateDirectories:NO attributes:nil error:nil];
+ self.executionQueue = dispatch_queue_create("com.apple.shortcuts.shorcut-package-file.execution-queue", NULL);
+}
+-(void)extractShortcutFileRepresentationWithCompletion:(id)arg0 {
+ dispatch_async([self executionQueue], ^{
+  return [self preformShortcutDataExtractionWithCompletion:arg0];
+ });
+}
 @end
