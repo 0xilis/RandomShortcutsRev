@@ -25,4 +25,14 @@
    }
  }
 }
+-(BOOL)validateWithSigningMethod:(*NSInteger)arg0 error:(NSError**)arg1 {
+    return [self validateWithSigningMethod:arg0 iCloudIdentifier:nil error:arg1];
+}
+-(struct __SecKey *)copyPublicKey {
+ if ([[self signingCertificateChain]count]) {
+  return [[[self signingCertificateChain]firstObject]copyPublicKey];
+ } else {
+  return [self signingPublicKey];
+ }
+}
 @end
