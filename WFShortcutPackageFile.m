@@ -172,4 +172,14 @@ if (auth) {
   return [self preformShortcutDataExtractionWithCompletion:arg0];
  });
 }
+-(id)extractShortcutFileRepresentationWithSigningMethod:(*NSInteger)arg0 iCloudIdentifier:(*id)arg1 error:(NSError**)arg2 {
+    //WIP!!!!!
+    dispatch_semaphore_create(0);
+    [arg0 preformShortcutDataExtractionWithCompletion:^(WFFileRepresentation* a, NSString* b, NSError** c){
+      self.fileManager._delegate = a;
+      self.signedShortcutFileURL = b;
+      dispatch_semaphore_signal();
+    }];
+    return;
+}
 @end
