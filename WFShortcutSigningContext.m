@@ -1,17 +1,22 @@
+#import <Foundation/Foundation.h>
+#import "WFShortcutSigningContext.h"
+
 @implementation WFShortcutSigningContext
 -(id)generateAuthData {
  NSArray* certChain = [self signingCertificateChain];
  if ([certChain count]) {
+  long dumb = [[self signingCertificateChain]if_compactMap:^{},wip,wip];
+  if (dumb == [[self signingCertificateChain] count]) {
+   return [NSPropertyListSerialization dataWithPropertyList:[[NSMutableDictionary dictionaryWithDictionary:[NSDictionary dictionaryWithObjects:dumb forKeys:@"SigningCertificateChain" count:1]] format:NSPropertyListBinaryFormat_v1_0 options:nil error:nil]; //this is especially wip
+  } else {
+   //error
+  }
  } else {
    if ([self appleIDValidationRecord]) {
      long dumb = [[self appleIDCertificateChain]if_compactMap:^{},wip,wip];
-     if (dumb == [[self signingCertificateChain] count]) {
+     if (dumb == [[self appleIDCertificateChain] count]) {
        SecKeyCopyExternalRepresentation([self signingPublicKey], 0);
-       @"AppleIDCertificateChain";
-       @"SigningPublicKey";
-       @"SigningPublicKeySignature";
-       [self signingPublicKeySignature];
-       [NSDictionary dictionaryWithObjects: forKeys:@"AppleIDCertificateChain",@"SigningPublicKey",@"SigningPublicKeySignature",@"AppleIDValidationRecord" count:4]; //this is especially wip
+       return [NSPropertyListSerialization dataWithPropertyList:[[NSMutableDictionary dictionaryWithDictionary:[NSDictionary dictionaryWithObjects:dumb,cert,[self signingPublicKeySignature],[[self appleIDValidationRecord]data] forKeys:@"AppleIDCertificateChain",@"SigningPublicKey",@"SigningPublicKeySignature",@"AppleIDValidationRecord" count:4]] format:NSPropertyListBinaryFormat_v1_0 options:nil error:nil]; //this is especially wip
      } else {
        //error
      }
