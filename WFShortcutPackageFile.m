@@ -136,4 +136,29 @@ if (auth) {
   //error
  }
 }
+-(id)initWithShortcutData:(id)arg0 shortcutName:(id)arg1 {
+ self = [super init];
+ if (self) {
+  self.shortcutData = arg0;
+  self.shortcutName = arg1;
+ }
+ return self;
+}
+-(id)initWithSignedShortcutData:(id)arg0 shortcutName:(id)arg1 {
+ self = [super init];
+ if (self) {
+  self.signedShortcutData = arg0;
+  self.shortcutName = arg1;
+ }
+ return self;
+}
+-(id)initWithSignedShortcutFileURL:(id)arg0 {
+ self = [super init];
+ if (self) {
+  self.signedShortcutFileURL = arg0;
+  self.shortcutName = [[arg0 lastPathComponent]stringByDeletingPathExtension];
+  [self commonInit];
+ }
+ return self;
+}
 @end
