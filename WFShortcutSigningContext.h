@@ -1,14 +1,12 @@
 #import <Foundation/Foundation.h>
 
 @interface WFShortcutSigningContext : NSObject
-
 @property (readonly, copy, nonatomic) NSArray *appleIDCertificateChain;
 @property (readonly, nonatomic) SFAppleIDValidationRecord *appleIDValidationRecord;
 @property (readonly, nonatomic) NSDate *expirationDate;
 @property (readonly, copy, nonatomic) NSArray *signingCertificateChain;
 @property (nonatomic) *__SecKey signingPublicKey;
 @property (retain, nonatomic) NSData *signingPublicKeySignature;
-
 +(id)contextWithAppleIDAccount:(id)arg0 signingKey:(struct __SecKey *)arg1;
 +(id)contextWithAuthData:(id)arg0;
 +(id)contextWithSigningCertificateChain:(id)arg0;
@@ -22,6 +20,4 @@
 -(struct __SecKey *)copyPublicKey;
 -(void)validateAppleIDValidationRecordWithCompletion:(id)arg0;
 -(void)validateWithCompletion:(id)arg0;
-
-
 @end
