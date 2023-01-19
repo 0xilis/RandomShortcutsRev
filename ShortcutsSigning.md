@@ -6,7 +6,7 @@ Shortcuts as of iOS 15 has multiple different types of formats. First is the old
 
 However, with the introduction of iOS 15, this brings the introduction to signed shortcut files, that being contact signed and iCloud signed. (This write-up will mostly focus on contact signed). To my knowledge no one has really publicly documented them / how shortcuts handles these all that much, so I'd figure I'd do it here.
 
-Admittedly I'm not the best at re so some stuff may not be 100% accurate, but I'm confident enough that at the very least a lot of this is and as I have just noted I haven't seen anyone publicly document this, and something's better than nothing I guess /shrug.
+Admittedly I'm not the best at re so some stuff may not be 100% accurate, but I'm confident enough that at the very least a lot of this is and as I have just noted I haven't seen anyone publicly document this, and something's better than nothing I guess ¯\\\_(ツ)_/¯.
 
 # Importing
 
@@ -19,5 +19,7 @@ If you've ever wondered how the shortcuts cli tool signs on macOS, it's just a w
 I've not looked at iCloud signing that much. Any iCloud signed shortcuts are available on iCloud (hence the name) - hell if you take a look at an iCloud signed shortcut, you'll see its identifier, which placing into icloud.com/shortcuts/(id) will show the shortcut.
 
 As far as contact signing goes I've looked into it more.
+
+So first let's get into importing contact signed shortcuts. The method -[WFShortcutSigningContext validateAppleIDValidationRecordWithCompletion:]: validates that the shortcut is shared from a contact. SFAppleIDClient, from privateframework sharing.framework is used (though actually only SFAppleIDAccount), as it uses [SFAppleIDClient myAccountWithError:]). The method first checks [[[[[SFAppleIDClient alloc]init]myAccountWithError:nil]altDSID]isEqualToString:[self appleIDValidationRecord]]. Aka, if the DSID of the apple account matches up with the contact signed shortcut, it will allow importing of the shortcut. It doesn't even check if private sharing is enabled since it just assumes that since DSID is the same it's from the user and not a contact. If not, all hope is not lost! Checks if private sharing is enabled, and if so, checks valid phone hashes / email hashes associated with SFAppleIDClient (the hashes are SHA256). If hash match, allow import of contact signed shortcut.
 
 to be continued
