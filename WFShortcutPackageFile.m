@@ -15,7 +15,7 @@
   [daKey setObject:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom forKey:(__bridge id)kSecAttrKeyType];
   [daKey setObject:0x6469b0 forKey:(__bridge id)kSecAttrKeySizeInBits];
   [daKey setObject:@NO forKey:(__bridge id)kSecAttrIsPermanent];
-  SecKeyRef daKey = SecKeyCreateRandomKey(mutableDict, 0)
+  SecKeyRef daKey = SecKeyCreateRandomKey(mutableDict, 0);
   [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:[WFShortcutSigningContext contextWithAppleIDAccount:arg0 signingKey:daKey] error:0];
 }
 -(void)generateSignedShortcutFileRepresentationWithPrivateKey:(id)arg0 signingContext:(id)arg1 error:(id)arg2 {
