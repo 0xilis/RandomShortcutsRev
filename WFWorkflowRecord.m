@@ -23,7 +23,7 @@
  return [self addWatchWorkflowTypeIfEligibleWithIneligibleActionIdentifiers:[[WFActionRegistry sharedRegistry] identifiersOfActionsDisabledOnWatch]];
 }
 -(BOOL)addWatchWorkflowTypeIfEligibleWithIneligibleActionIdentifiers:(id)arg0 {
- if (![[self workflowTypes] containsObject:WFWorkflowTypeWatch()]) {
+ if (![[self workflowTypes] containsObject:(WFWorkflowType *)WFWorkflowTypeWatch]) {
   if ([self isEligibleForWatchWithIneligibleActionIdentifiers:arg0]) {
    [self addWatchWorkflowType];
   } else {
@@ -33,8 +33,21 @@
  return 1;
 }
 -(void)addWatchWorkflowType {
- [self setWorkflowTypes:[[self workflowTypes] arrayByAddingObject:WFWorkflowTypeWatch()]];
+ [self setWorkflowTypes:[[self workflowTypes] arrayByAddingObject:(WFWorkflowType *)WFWorkflowTypeWatch]];
  //log
 }
-
++(id)workflowSubtitleForActionCount:(NSUInteger)arg0 savedSubtitle:(id)arg1 {
+ if ((arg0 == 1) && arg1) {
+  return arg1;
+ } else {
+  return [WFWorkflow localizedSubtitleWithActionCount:arg0];
+ }
+}
++(id)defaultPropertyValues {
+NSArray* supportedInputClassNames = [WFWorkflow supportedInputClassNames]array];
+    id lastMigratedClientVersion = [[NSBundle bundleForClass:[WFWorkflowRecord class]] objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey];
+[@"icon",@"creationDate",@"modificationDate",@"workflowTypes",@"quickActionSurfacesForSharing",@"inputClasses",@"outputClasses",@"hasShortcutInputVariables",@"actions",@"actionCount"];
+[[[WFWorkflowIcon alloc]init],[NSDate date],[NSDate date],NSArray*,NSArray*,supportedInputClassNames,NSArray*,@NO,[NSArray new],NSConstantIntegerNumber,[NSArray new],@NO,[[WFDevice currentDevice]name],lastMigratedClientVersion,[NSSet new],[NSSet new],@YES];
+    //WIP
+}
 @end
