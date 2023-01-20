@@ -44,10 +44,8 @@
  }
 }
 +(id)defaultPropertyValues {
-NSArray* supportedInputClassNames = [WFWorkflow supportedInputClassNames]array];
-    id lastMigratedClientVersion = [[NSBundle bundleForClass:[WFWorkflowRecord class]] objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey];
-[@"icon",@"creationDate",@"modificationDate",@"workflowTypes",@"quickActionSurfacesForSharing",@"inputClasses",@"outputClasses",@"hasShortcutInputVariables",@"actions",@"actionCount"];
-[[[WFWorkflowIcon alloc]init],[NSDate date],[NSDate date],NSArray*,NSArray*,supportedInputClassNames,NSArray*,@NO,[NSArray new],NSConstantIntegerNumber,[NSArray new],@NO,[[WFDevice currentDevice]name],lastMigratedClientVersion,[NSSet new],[NSSet new],@YES];
-    //WIP
+ NSArray* supportedInputClassNames = [WFWorkflow supportedInputClassNames]array];
+ id lastMigratedClientVersion = [[NSBundle bundleForClass:[WFWorkflowRecord class]] objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey];
+ return [NSDictionary dictionaryWithObjects:[[WFWorkflowIcon alloc]init],[NSDate date],[NSDate date],NSArray*,NSArray*,supportedInputClassNames,NSArray*,@NO,[NSArray new],NSConstantIntegerNumber,[NSArray new],@NO,[[WFDevice currentDevice]name],lastMigratedClientVersion,[NSSet new],[NSSet new],@YES forKeys:@"icon",@"creationDate",@"modificationDate",@"workflowTypes",@"quickActionSurfacesForSharing",@"inputClasses",@"outputClasses",@"hasShortcutInputVariables",@"actions",@"actionCount",@"importQuestions",@"deleted",@"lastSavedOnDeviceName",@"lastMigratedClientVersion",@"accessResourcePerWorkflowStates",@"smartPromptPerWorkflowStates",@"hasOutputFallback" count:17]
 }
 @end
