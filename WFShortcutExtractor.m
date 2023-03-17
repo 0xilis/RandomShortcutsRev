@@ -38,6 +38,31 @@
  //log
  [[[WFShortcutPackageFile alloc]initWithSignedShortcutFileURL:[shortcutFile fileURL]]extractShortcutFileRepresentationWithCompletion://wip]; //completion block is not yet implemented here but basically it checks that shortcutFileContentType is 0x1/0x2/0x3, if not it makes it 0xffffffffffffffff, and calls extractWorkflowFile:shortcutName:shortcutFileContentType:iCloudIdentifier:completion: 
 }
+-(void)extractWorkflowFile:(WFFileRepresentation*)shortcutFile shortcutName:(NSString *)name shortcutFileContentType:(NSInteger)shortcutType iCloudIdentifier:(id)shortcutIdentifier completion:(id)completion {
+ NSError* err = nil;
+ WFWorkflowRecord* wfRecord = [[[WFWorkflowFile alloc]initWithDescriptor:[[WFWorkflowFileDescriptor alloc]initWithFile:shortcutFile name:name sourceAppIdentifier:[self sourceApplication]] error:&err]recordRepresentationWithError:&err];
+ NSString *source;
+ if (shortcutType == 0x1) {
+  source = @"ShortcutSourceFilePublic";
+ } else if (shortcutType == 0x2) {
+  source = @"ShortcutSourceFileKnownContacts";
+ } else if (rax == 0x3) {
+  source = @"ShortcutSourceFilePersonal";
+ } else {
+  source = @"ShortcutSourceUnknown";
+ }
+ [wfRecord setSource:source];
+ if (wfRecord) {
+  WFExtractShortcutResult* extractShortcutResult = [[WFExtractShortcutResult alloc] initWithRecord:wfRecord fileContentType:shortcutType iCloudIdentifier:shortcutIdentifier sourceApplicationIdentifier:[self sourceApplication] sharedDate:[shortcutFile creationDate]];
+  if ([self skipsMaliciousScanning]) {
+   completion(extractShortcutResult, nil);
+  } else {
+   //WFWorkflowRemoteQuarantineRequest / WFRemoteQuarantinePolicyEvaluator stuff
+  }
+ } else {
+  completion(nil, err);
+ }
+}
 -(id)initWithURL:(id)url allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(id)app {
  if (!url) {
   //error
