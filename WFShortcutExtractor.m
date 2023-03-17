@@ -2,6 +2,9 @@
 #import "WFShortcutExtractor.h"
 
 @implementation WFShortcutExtractor
++(BOOL)isShortcutFileType:(WFFileType *)fileType {
+ return [fileType conformsToUTTypes:[NSArray arrayWithObjects:@"com.apple.shortcut",@"com.apple.shortcuts.workflow-file",@"is.workflow.my.workflow",@"is.workflow.workflow"]];
+}
 -(void)extractShortcutFile:(WFFileRepresentation*)shortcutFile completion:(id)completion {
  //log
  if ([[shortcutFile mappedData] length] <= 0x3) {
