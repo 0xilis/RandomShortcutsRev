@@ -63,12 +63,13 @@
   completion(nil, err);
  }
 }
--(id)initWithURL:(id)url allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(id)app {
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
  if (!url) {
   //error
  }
  self = [super init];
  if (self) {
+  _extractingURL = url;
   _allowsOldFormatFile = allowOldFileFormat;
   _skipsMaliciousScanning = skipScanning;
   _fileAdoptionOptions = options;
@@ -76,20 +77,40 @@
   _sourceApplication = app;
  }
 }
+-(id)initWithFile:(WFFileRepresentation *)file allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
+ if (!file) {
+  //error
+ }
+ self = [super init];
+ if (self) {
+  _extractingURL = [file fileURL];
+  _extractingFile = file;
+  _allowsOldFormatFile = allowOldFileFormat;
+  _skipsMaliciousScanning = skipScanning;
+  _suggestedName = suggestName;
+  _sourceApplication = app;
+ }
+}
 //wrapper methods
--(id)initWithURL:(id)url allowsOldFormatFile:(BOOL)allowOldFileFormat suggestedName:(NSString *)suggestName sourceApplication:(id)app {
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
  return [self initWithURL:url allowsOldFormatFile:allowOldFileFormat skipsMaliciousScanning:NO fileAdoptionOptions:nil suggestedName:suggestName sourceApplication:app];
 }
--(id)initWithURL:(id)url allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning suggestedName:(NSString *)suggestName sourceApplication:(id)app {
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
  return [self initWithURL:url allowsOldFormatFile:allowOldFileFormat skipsMaliciousScanning:skipScanning fileAdoptionOptions:nil suggestedName:suggestName sourceApplication:app];
 }
--(id)initWithURL:(id)url allowsOldFormatFile:(BOOL)allowOldFileFormat fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(id)app {
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
  return [self initWithURL:url allowsOldFormatFile:allowOldFileFormat skipsMaliciousScanning:NO fileAdoptionOptions:options suggestedName:suggestName sourceApplication:app];
 }
--(id)initWithURL:(id)url fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(id)app {
+-(id)initWithURL:(NSURL *)url fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
  return [self initWithURL:url allowsOldFormatFile:NO fileAdoptionOptions:options suggestedName:suggestName sourceApplication:app];
 }
--(id)initWithURL:(id)url suggestedName:(NSString *)suggestName sourceApplication:(id)app {
+-(id)initWithURL:(NSURL *)url suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
  return [self initWithURL:url allowsOldFormatFile:NO fileAdoptionOptions:nil suggestedName:suggestName sourceApplication:app];
+}
+-(id)initWithFile:(WFFileRepresentation *)file suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
+ return [self initWithFile:file allowsOldFormatFile:NO suggestedName:suggestName sourceApplication:app];
+}
+-(id)initWithFile:(WFFileRepresentation *)file allowsOldFormatFile:(BOOL)allowOldFileFormat suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app {
+ return [self initWithFile:file allowsOldFormatFile:allowOldFileFormat skipsMaliciousScanning:NO suggestedName:suggestName sourceApplication:app];
 }
 @end
