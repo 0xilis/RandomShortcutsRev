@@ -63,6 +63,18 @@
 -(id)bundledURL {
  return [[NSBundle bundleForClass:[self class]]URLForResource:@"WFActions" withExtension:@"plist"];
 }
+-(void)updateCache:(id)cache {
+ id shortcutsContainer = [CKContainer wf_shortcutsContainer];
+ WFCloudKitItemRequest* ckItemRq = [[WFCloudKitItemRequest alloc]initWithContainer:shortcutsContainer database:[shortcutsContainer publicCloudDatabase]];
+ NSString *config = [[NSUserDefaults workflowUserDefaults] stringForKey:@"WFBundledActionProviderConfiguration"];
+ [ckItemRq fetchConfigurationAssetWithType:@"com.apple.shortcuts.actions" configuration:config completionHandler:^{
+  if (config) {
+   [[NSFileManager defaultManager]replaceItemAtURL:[self cacheURL] withItemAtURL:[config fileURL] backupItemName:nil options:nil resultingItemURL:nil error:??];
+  }
+ }];
+ [[NSFileManager defaultManager] enumeratorAtURL:[self cacheDirectoryURL] includingPropertiesForKeys:NO options:nil errorHandler:^{//block}];
+//wip
+}
 -(void)deleteCache {
  [[NSFileManager defaultManager] removeItemAtURL:[self cacheURL] error:nil];
 }
