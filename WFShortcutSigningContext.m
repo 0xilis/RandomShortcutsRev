@@ -57,7 +57,7 @@
  if ([[account altDSID]isEqualToString:[[self appleIDValidationRecord]altDSID]]) {
   completion(0x1,0x3,0x0,0x0);
  } else if ([WFSharingSettings isPrivateSharingEnabled]) {
-  [[[SFClient alloc]init]contactIDForEmailHash:[[self appleIDValidationRecord]validatedEmailHashes] phoneHash:_WFCombinedHashStringFromArray([[self appleIDValidationRecord] validatedPhoneHashes]) completion:^{//block}];
+  [[[SFClient alloc]init]contactIDForEmailHash:[[self appleIDValidationRecord]validatedEmailHashes] phoneHash:_WFCombinedHashStringFromArray([[self appleIDValidationRecord] validatedPhoneHashes]) completion:^{/*block*/}];
  }
 }
 @end
