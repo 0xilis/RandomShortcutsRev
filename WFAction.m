@@ -43,7 +43,7 @@
      if ([self isRunningInSiriUserInterface]) {
        //log
      }
-     [[WFSmartPromptConfiguration alloc] initWithSmartPromptStates:[approvalResult undefinedStates] attributionSet:[[self contentAttributionTracker]trackedAttributionSet] contentItemCache:arg4 action:self contentDestination:var_88 reference:[[self workflow]reference] source:@"Shortcut"];
+     [[WFSmartPromptConfiguration alloc] initWithSmartPromptStates:[approvalResult undefinedStates] attributionSet:[[self contentAttributionTracker]trackedAttributionSet] contentItemCache:arg4 action:self contentDestination:arg3 reference:[[self workflow]reference] source:@"Shortcut"];
       //theres more after here but im done for now with this
     }
    } else {
