@@ -2,7 +2,7 @@
 
 @implementation WFAction
 //wip
--(void)performSmartPromptChecksWithUserInterface:(id)arg1 contentDestination:(id)arg2 contentItemCache:(id)arg3 isWebpageCoercion:(_Bool)arg4 completionHandler:(CDUnknownBlockType)arg5 {
+-(void)performSmartPromptChecksWithUserInterface:(id)userInterface contentDestination:(id)descContent contentItemCache:(id)cacheItemContent isWebpageCoercion:(_Bool)webpageCoercion completionHandler:(CDUnknownBlockType)completion {
  if (![[self workflow]databaseProxy]) {
   //log %s Not performing smart prompt checks because database access is not available.
   //error
@@ -31,7 +31,7 @@
   set = [NSSet set];
  }
  NSErrror** err = nil;
- id approvalResult = [databaseProxy approvalResultForContentAttributionSet:contentAttributes contentDestination:arg2 actionUUID:actionUUID actionIdentifier:actionID actionIndex:indexOfAction reference:[[self workflow]reference] allowedOnceStates:set error:&err];
+ id approvalResult = [databaseProxy approvalResultForContentAttributionSet:contentAttributes contentDestination:descContent actionUUID:actionUUID actionIdentifier:actionID actionIndex:indexOfAction reference:[[self workflow]reference] allowedOnceStates:set error:&err];
  [self setAllowedOnceSmartPromptStates:nil];
  [self setUUID:[approvalResult actionUUID]];
  if (!indexOfAction) {
@@ -43,7 +43,7 @@
      if ([self isRunningInSiriUserInterface]) {
        //log
      }
-     [[WFSmartPromptConfiguration alloc] initWithSmartPromptStates:[approvalResult undefinedStates] attributionSet:[[self contentAttributionTracker]trackedAttributionSet] contentItemCache:arg4 action:self contentDestination:arg3 reference:[[self workflow]reference] source:@"Shortcut"];
+     [[WFSmartPromptConfiguration alloc] initWithSmartPromptStates:[approvalResult undefinedStates] attributionSet:[[self contentAttributionTracker]trackedAttributionSet] contentItemCache:cacheItemContent action:self contentDestination:descContent reference:[[self workflow]reference] source:@"Shortcut"];
       //theres more after here but im done for now with this
     }
    } else {
