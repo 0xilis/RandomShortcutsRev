@@ -205,9 +205,11 @@ So - the overlying key following the dict for the action is its action identifie
 
 # Types of shortcuts
 
-Unsigned Shortcuts - Aka, the normal file format for iOS 14 and below, can be a binary plist or xml plist. Not importable by normal means on iOS 15+.
-Contact-Signed Shortcuts - A AEA (Apple Encrypted Archive) shortcut that is only openable by some of your contacts.
-iCloud-Signed Shortcuts - A AEA (Apple Encrypted Archive) shortcut that can be opened by anyone. It contains the iCloud ID of the signed shortcut.
-Default Shortcuts - In `/System/Library/PrivateFrameworks/WorkflowKit.framework/WFDefaultShortcuts.plist`, there is a plist containing iCloud identifiers of shortcuts to be used as default. What's interesting is that this is the only shortcut file type I could find (tmk, with exception of automator to shortcut conversion on macOS) that is importable and does not sign check, but not like you're going to change this file anyway so no security risk there.
-iCloud Shared Shortcuts (WFSharedShortcut) - iCloud Signed Shortcut.
-Gallery Shortcuts (WFGalleryShortcuts) - Yes, these are different from default shortcuts. Basically same thing as iCloud Shared Shortcuts (which are iCloud Signed Shortcuts).
+* Unsigned Shortcuts - Aka, the normal file format for iOS 14 and below, can be a binary plist or xml plist. Not importable by normal means on iOS 15+.
+* Contact-Signed Shortcuts - A AEA (Apple Encrypted Archive) shortcut that is only openable by some of your contacts.
+* iCloud-Signed Shortcuts - A AEA (Apple Encrypted Archive) shortcut that can be opened by anyone. It contains the iCloud ID of the signed shortcut.
+* Default Shortcuts - In `/System/Library/PrivateFrameworks/WorkflowKit.framework/WFDefaultShortcuts.plist`, there is a plist containing iCloud identifiers of shortcuts to be used as default. What's interesting is that this is the only shortcut file type I could find (tmk, with exception of automator to shortcut conversion on macOS) that is importable and does not sign check, but not like you're going to change this file anyway so no security risk there.
+* iCloud Shared Shortcuts (WFSharedShortcut) - iCloud Signed Shortcut.
+* Gallery Shortcuts (WFGalleryShortcuts) - Yes, these are different from default shortcuts. Basically same thing as iCloud Shared Shortcuts (which are iCloud Signed Shortcuts).
+
+Also worth noting that on macOS, automator files can be imported and converted into shortcut files. Automator files are unsigned. If you could trick the migrator into using shortcuts exclusive actions it would be mad funny (and this actually seems like something that may actually be possible to do) but I haven't looked into it because it would be a macOS only bug.
