@@ -1,3 +1,4 @@
+#import "WFWorkflowController.h"
 @implementation WFWorkflowController
 -(void)runAction:(WFAction* )action withInput:(id)input completionHandler:(id)completion {
  dispatch_assert_queue([self executionQueue]);
@@ -7,5 +8,26 @@
     completion(action, input, [self donateInteraction]);
   })
  }];
+}
+-(void)run {
+ dispatch_async([self executionQueue], ^{
+  [self _run];
+ });
+}
+-(void)stop {
+ dispatch_async([self executionQueue], ^{
+  [self queue_stopWithError:nil];
+ });
+}
+-(void)stopWithError:(NSError **)err {
+ dispatch_async([self executionQueue], ^{
+  [self queue_stopWithError:err];
+ });
+}
+-(void)queue_stopWithError:(NSError **)err {
+ dispatch_assert_queue([self executionQueue]);
+ [isRunning]
+ [self setFinishedRunningWithSuccess:NO];
+ //wip
 }
 @end
