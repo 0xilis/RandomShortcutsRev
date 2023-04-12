@@ -26,8 +26,19 @@
 }
 -(void)queue_stopWithError:(NSError **)err {
  dispatch_assert_queue([self executionQueue]);
- [isRunning]
+ BOOL running = [self isRunning];
  [self setFinishedRunningWithSuccess:NO];
- //wip
+ if (running) {
+  WFAction *currentAction = [self currentAction];
+  if ([currentAction isRunning]) {
+   if (err) {
+    [currentAction finishRunningWithError:err];
+   } else {
+    [currentAction cancel];
+   }
+  } else {
+   [self didFinishRunningWithError:err cancelled:(err == nil)];
+  }
+ }
 }
 @end
