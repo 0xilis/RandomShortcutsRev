@@ -37,7 +37,7 @@ if (auth) {
      } else {
       AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, [auth bytes], [auth length]);
       NSURL *daURL = [[[self temporaryWorkingDirectoryURL] URLByAppendingPathComponent:[self fileName]]fileSystemRepresentation]; //im amazing at var names
-      AAByteStream byteStream = AAFileStreamOpenWithPath(daURL, 0x202, 0x1a4);
+      AAByteStream byteStream = AAFileStreamOpenWithPath(daURL, O_CREAT | O_RDWR, 0420);
       AEAEncryptionOutputStreamOpen(byteStream, context, 0, 0);
       AAFieldKeySet fieldKeySet = AAFieldKeySetCreateWithString("TYP,PAT,LNK,DEV,DAT,MOD,FLG,MTM,BTM,CTM,HLC,CLC");
       if (fieldKeySet) {
@@ -97,9 +97,9 @@ if (auth) {
  }
  AAByteStream byteStream;
  if (signedShortcutData) {
-  byteStream = AAMemoryInputStreamOpen([signedShortcutData bytes], [signedShortcutData length]);
+  byteStream = AAMemoryInputStreamOpen([[self signedShortcutData] bytes], [[self signedShortcutData] length]);
  } else {
-  byteStream = AAFileStreamOpenWithPath([[self signedShortcutFileURL] fileSystemRepresentation], 0, 0x1a4);
+  byteStream = AAFileStreamOpenWithPath([[self signedShortcutFileURL] fileSystemRepresentation], 0, 0420); //the last arg, 0420, means owner read and group write
  }
  if (!byteSteam) {
   //error
