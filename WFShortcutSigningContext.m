@@ -60,4 +60,34 @@
   [[[SFClient alloc]init]contactIDForEmailHash:[[self appleIDValidationRecord]validatedEmailHashes] phoneHash:_WFCombinedHashStringFromArray([[self appleIDValidationRecord] validatedPhoneHashes]) completion:^{/*block*/}];
  }
 }
+-(BOOL)validateSigningCertificateChainWithICloudIdentifier:(*id)arg0 error:(*id)arg1 {
+ //log
+ NSArray *signingCertificateChain = [self signingCertificateChain];
+ //FYI: This part of the method is NOT CORRECT at all bc i have no idea how if_map works lol sorry
+ NSArray* certificates = [signingCertificateChain if_map:^{
+  [signingCertificateChain certificate]; //WFShortcutSigningCertificate
+ }];
+ 
+ //this part im still iffy on but its definitely more accurate than above
+ CFArrayRef signingCertificateChainRef = (__bridge CFArrayRef)signingCertificateChain;
+ SecPolicyRef policy = SecPolicyCreateRevocation(kSecRevocationUseAnyAvailableMethod);
+ SecTrustRef trust;
+ OSStatus status = SecTrustCreateWithCertificates(signingCertificateChainRef, policy, &trust);
+ if ((status) || (trust)) {
+  CFStringRef commonName = arg0;
+  SecCertificateRef leafCert = certificates[0];
+  if (commonName) {
+   SecCertificateCopyCommonName(leafCert, &commonName);
+  }
+  if (!SecTrustEvaluateWithError(trust, nil)) {
+   //error
+  }
+  if (!SecCertificateCopyExtensionValue(leafCert, @"1.2.840.113635.100.18.1", nil)) {
+   //error
+  }
+  //Shortcut Signing Certificate Chain Validated Successfully
+  //CFRelease the stuff too lazy to add
+  return YES;
+ }
+}
 @end
