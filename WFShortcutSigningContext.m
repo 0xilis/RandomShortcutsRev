@@ -46,11 +46,11 @@
  return self;
 }
 -(id)initWithSigningCertificateChain:(id)arg0 {
-    self = [super init];
-    if ((self) && ([arg0 count])) {
-            self.signingCertificateChain = arg0;
-    }
-    return self;
+ self = [super init];
+ if ((self) && ([arg0 count])) {
+  self.signingCertificateChain = arg0;
+ }
+ return self;
 }
 -(void)validateAppleIDValidationRecordWithCompletion:(id)completion {
  SFAppleIDAccount* account = [[[SFAppleIDClient alloc]init]myAccountWithError:nil];
@@ -88,6 +88,65 @@
   //Shortcut Signing Certificate Chain Validated Successfully
   //CFRelease the stuff too lazy to add
   return YES;
+ }
+}
+-(BOOL)validateAppleIDCertificatesWithError:(*id)arg0 {
+ //log
+ NSArray *signingCertificateChain = [self signingCertificateChain];
+ //FYI: This part of the method is NOT CORRECT at all bc i have no idea how if_map works lol sorry
+ NSArray* certificates = [signingCertificateChain if_map:^{
+  [signingCertificateChain certificate]; //WFShortcutSigningCertificate
+ }];
+ 
+ if (!certificates) {
+  //i am so fucking confused
+  return validateAppleIDCert(0xffffffffffffe5cf, 0x0); //isValid will be 0
+ }
+ SecPolicyRef policy = SecPolicyCreateAppleIDAuthorityPolicy();
+ SecPolicyCreateAppleIDAuthorityPolicy(policy, kSecPolicyCheckTemporalValidity, kCFBooleanFalse);
+ if (!policy) {
+  return validateAppleIDCert(0xffffffffffffe596, 0x0);
+ }
+ OSStatus status = SecTrustCreateWithCertificates(certificates, policy, kCFBooleanFalse);
+ if (status) {
+  //error, Signed Shortcut File Apple ID Certificate Chain Verification: SecTrustCreateWithCertificates failed with error %d
+  return validateAppleIDCert(0xffffffffffffe596, 0x0);
+ }
+ 
+ if ( /* a very cool if statement */) { //LMAO
+  return validateAppleIDCert(0xffffffffffffe596, 0x0);
+ }
+ 
+ if (SecTrustEvaluateWithError() == 0x0) {
+  CFErrorDomain cfError = CFErrorGetDomain(0x0);
+  if (CFEqual(cfError, NSOSStatusErrorDomain)) {
+   if (CFErrorGetCode(0x0) == 0xfffffffffffef716) {
+    return validateAppleIDCert(0x0, 0x1);
+   } else {
+    //error
+   }
+  } else {
+   //error
+  }
+ } else {
+  return validateAppleIDCert(0x0, 0x1);
+ }
+ 
+}
+static inline __attribute__((always_inline)) BOOL validateAppleIDCert(long arg0, long arg1) {
+ long something = 0xffffffffffffe5d4;
+ if (arg0) {
+  something = arg0;
+ }
+ if (arg1) {
+  something = arg1;
+ }
+ BOOL isValid = (something == 0x0 ? 0x1 : 0x0) & arg1;
+ if (isValid) {
+  //log
+  return YES;
+ } else {
+  //error
  }
 }
 @end
