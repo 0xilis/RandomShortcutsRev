@@ -27,6 +27,12 @@
 }
 -(void)extractWorkflowFile:(WFFileRepresentation*)shortcutFile completion:(id)completion {
  //log
+ //this function is called when you are importing an unsigned shortcut file
+ //basically, if you are running an internal build of voiceshortcuts (VCIsInternalBuild() is a function from VoiceShortcutsClient.framework)
+ //then WFShortcutFileSharingEnabled is actually checked, if yes you can import it
+ //however, more than likely - you are not running an internal build :P.
+ //so, another value that is also checked is [self allowsOldFormatFile]
+ //TMK this always returns false as of now
  if ((VCIsInternalBuild() && [WFSharingSettings shortcutFileSharingEnabled]) || [self allowsOldFormatFile]) {
   NSString *workflowName = [self suggestedName];
   if (!workflowName) {
@@ -49,7 +55,7 @@
   source = @"ShortcutSourceFilePublic";
  } else if (shortcutType == 0x2) {
   source = @"ShortcutSourceFileKnownContacts";
- } else if (rax == 0x3) {
+ } else if (shortcutType == 0x3) {
   source = @"ShortcutSourceFilePersonal";
  } else {
   source = @"ShortcutSourceUnknown";
