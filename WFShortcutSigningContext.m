@@ -92,7 +92,7 @@
 }
 -(BOOL)validateAppleIDCertificatesWithError:(*id)arg0 {
  //log
- NSArray *signingCertificateChain = [self signingCertificateChain];
+ NSArray *signingCertificateChain = [self appleIDCertificateChain];
  //FYI: This part of the method is NOT CORRECT at all bc i have no idea how if_map works lol sorry
  NSArray* certificates = [signingCertificateChain if_map:^{
   [signingCertificateChain certificate]; //WFShortcutSigningCertificate
@@ -107,17 +107,18 @@
  if (!policy) {
   return validateAppleIDCert(0xffffffffffffe596, 0x0);
  }
- OSStatus status = SecTrustCreateWithCertificates(certificates, policy, kCFBooleanFalse);
+ id something = 0;
+ OSStatus status = SecTrustCreateWithCertificates(certificates, policy, &something);
  if (status) {
   //error, Signed Shortcut File Apple ID Certificate Chain Verification: SecTrustCreateWithCertificates failed with error %d
   return validateAppleIDCert(0xffffffffffffe596, 0x0);
  }
  
- if ( /* a very cool if statement */) { //LMAO
+ if (!something) {
   return validateAppleIDCert(0xffffffffffffe596, 0x0);
  }
  
- if (SecTrustEvaluateWithError() == 0x0) {
+ if (!SecTrustEvaluateWithError()) {
   CFErrorDomain cfError = CFErrorGetDomain(0x0);
   if (CFEqual(cfError, NSOSStatusErrorDomain)) {
    if (CFErrorGetCode(0x0) == 0xfffffffffffef716) {
@@ -148,5 +149,29 @@ static inline __attribute__((always_inline)) BOOL validateAppleIDCert(long arg0,
  } else {
   //error
  }
+}
+/* This function is called in preformShortcutDataExtractionWithCompletion */
+-(void)validateWithCompletion:(id yesIKnowCompletionBlocksAreNotLikeThisIWillFixThisLaterIfIStillCare) {
+ id result;
+ id appleIDCertificateChain = [self appleIDCertificateChain];
+ if (appleIDCertificateChain) {
+  NSError **error = nil;
+  result = [self validateAppleIDCertificatesWithError:&error];
+  if (result) {
+   id validationRecord = [self appleIDValidationRecord];
+   if (!validationRecord) {
+    //error
+    return;
+   }
+   /* verify that altDSID is same (self-signed) or user is in contacts (contact-signed) */
+   [self validateAppleIDValidationRecordWithCompletion:completion];
+   return;
+  }
+ } else {
+  id nope = nil;
+  NSError **error = nil;
+  result = [self validateSigningCertificateChainWithICloudIdentifier:&nope error:&error];
+ }
+ completion(result);
 }
 @end
