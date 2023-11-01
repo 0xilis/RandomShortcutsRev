@@ -1,6 +1,11 @@
 #import <Foundation/Foundation.h>
 #import "WFShortcutSigningContext.h"
 
+/*
+ * This file in particular is VERY WIP.
+ * Decomp of WFShortcutSigningContext sucks here.
+ */
+
 @implementation WFShortcutSigningContext
 -(id)generateAuthData {
  NSArray* certChain = [self signingCertificateChain];
@@ -135,14 +140,14 @@
  
 }
 static inline __attribute__((always_inline)) BOOL validateAppleIDCert(long arg0, long arg1) {
- long something = 0xffffffffffffe5d4;
+ long something = -6700; //Too lazy to just 
  if (arg0) {
   something = arg0;
  }
  if (arg1) {
   something = arg1;
  }
- BOOL isValid = (something == 0x0 ? 0x1 : 0x0) & arg1;
+ BOOL isValid = !something & arg1;
  if (isValid) {
   //log
   return YES;
