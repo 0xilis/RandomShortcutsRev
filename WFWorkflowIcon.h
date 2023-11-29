@@ -17,7 +17,6 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic) NSInteger backgroundColorValue;
 @property (readonly, copy, nonatomic) NSData *customImageData;
 @property (readonly, nonatomic) unsigned short glyphCharacter;
-//@property (readonly, nonatomic) WFIcon *icon;
 +(NSUInteger)randomBackgroundColor;
 +(unsigned short)defaultGlyphCharacter;
 +(BOOL)supportsSecureCoding;
