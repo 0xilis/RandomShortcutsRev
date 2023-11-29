@@ -1,8 +1,9 @@
 #import <Foundation/Foundation.h>
+#import "WFIcon.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class WFIcon, WFColor;
+@class WFColor;
 
 @interface WFWorkflowIcon : NSObject
 -(instancetype)init;
