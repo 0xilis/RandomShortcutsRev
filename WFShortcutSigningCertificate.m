@@ -1,22 +1,37 @@
-#import <Foundation/Foundation.h>
+//
+//  WFShortcutSigningCertificate.m
+//  UnsigncutsApp
+//
+//  Created by Snoolie Keffaber on 2023/11/29.
+//
+
 #import "WFShortcutSigningCertificate.h"
 
 @implementation WFShortcutSigningCertificate
--(id)generateAuthData {
- return SecCertificateCopyData([self certificate]);
+-(NSString *)commonName {
+    NSString *commonName = nil;
+    CFStringRef cfCommonName = nil;
+    OSStatus result = SecCertificateCopyCommonName([self certificate], &cfCommonName);
+    if (result == 0) {
+        commonName = (__bridge NSString*)cfCommonName;
+    }
+    return commonName;
 }
--(struct __SecKey *)copyPublicKey {
+-(SecKeyRef)copyPublicKey {
  return SecCertificateCopyKey([self certificate]);
 }
--(id)initWithCertificate:(struct __SecCertificate *)arg0 {
+-(NSData*)generateAuthData {
+ return (__bridge NSData*)SecCertificateCopyData([self certificate]);
+}
+-(id)initWithCertificate:(SecCertificateRef)cert {
  self = [super init];
  if (self) {
-  self.certificate = arg0;
+  _certificate = cert;
  }
  return self;
 }
--(id)initWithCertificateData:(id)arg0 {
- SecCertificateRef cert = SecCertificateCreateWithData(0, arg0);
+-(id)initWithCertificateData:(NSData *)data {
+ SecCertificateRef cert = SecCertificateCreateWithData(0, (__bridge CFDataRef)data);
  if (cert) {
   return [self initWithCertificate:cert];
  }
