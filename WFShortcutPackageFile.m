@@ -64,16 +64,24 @@ if (auth) {
  }
 }
 }
--(void)generateDirectoryStructureInDirectory:(id)arg0 error:(id)arg1 {
- NSData *shortcutData = [self shortcutData];
- if (shortcutData) {
-  NSString *daURL = [arg0 URLByAppendingPathComponent:[self directoryName]];
-  if ([[self fileManager]createDirectoryAtURL:daURL withIntermediateDirectories:0 attributes:0 error:arg1]) {
-    [[self shortcutData] writeToURL:[daURL URLByAppendingPathComponent:@"Shortcut.wflow"] atomically:YES];
-  }
- } else {
-  //error
- }
+-(NSURL *)generateDirectoryStructureInDirectory:(NSURL *)dir error:(NSError ** _Nullable)err {
+    NSURL *returnURL;
+    if ([self shortcutData]) {
+        NSURL *url = [dir URLByAppendingPathComponent:[self directoryName]];
+        returnURL = nil;
+        BOOL didSucceed = [[self fileManager] createDirectoryAtURL:url withIntermediateDirectories:NO attributes:nil error:err];
+        if (didSucceed) {
+            NSURL *writeToURL = [url URLByAppendingPathComponent:@"Shortcut.wflow"];
+            [[self shortcutData]writeToURL:writeToURL atomically:YES];
+            returnURL = url;
+        }
+    } else {
+        if (err) {
+            *err = WFShortcutPackageFileFailedToSignShortcutFileError();
+        }
+        returnURL = nil;
+    }
+    return returnURL;
 }
 -(void)extractShortcutFileRepresentationWithSigningMethod:(id)arg0 error:(id)arg1 {
     [self extractShortcutFileRepresentationWithSigningMethod:arg0 iCloudIdentifier:0 error:arg1];
@@ -83,58 +91,94 @@ if (auth) {
     [self extractShortcutFileRepresentationWithSigningMethod:0 error:arg0];
     return;
 }
--(void)preformShortcutDataExtractionWithCompletion:(id)arg0 {
- WFLogSubsystem *daLog = getWFSecurityLogObject();
- if (os_log_type_enabled(daLog, 0)) {
-  //log
- }
- NSData *signedShortcutData = [self signedShortcutData];
- if (!signedShortcutData) {
-  NSURL *daURL = [self signedShortcutFileURL];
-  if (![self signedShortcutFileURL]) {
-   //error
-  }
- }
- AAByteStream byteStream;
- if (signedShortcutData) {
-  byteStream = AAMemoryInputStreamOpen([[self signedShortcutData] bytes], [[self signedShortcutData] length]);
- } else {
-  byteStream = AAFileStreamOpenWithPath([[self signedShortcutFileURL] fileSystemRepresentation], 0, 0420); //the last arg, 0420, means owner read and group write
- }
- if (!byteSteam) {
-  //error
- }
- AEAContext context = AEAContextCreateWithEncryptedStream(byteStream);
- if (!context) {
-  //error
- }
- size_t blobSize = 0;
- int fieldBlob = AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, 0, 0, &blobSize);
- if (fieldBlob) {
-  //error
- }
- if (blobSize == 0) {
-  //error
- }
- uint8_t *tooLazyForGoodVariableNames = (uint8_t *)malloc(blobSize);
- if (!(AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, blobSize, tooLazyForGoodVariableNames, 0))) {
-  id context2 = [WFShortcutSigningContext contextWithAuthData:[NSData dataWithBytesNoCopy:tooLazyForGoodVariableNames length:blobSize]];
-  if (context2) {
-   [context2 validateWithCompletion:^{
-     id publicKey = [context2 copyPublicKey];
-     if (publicKey) {
-       //finish latr
-     } else {
-      //error
-     }
-   }];
-  } else {
-   //error
-  }
- } else {
-  free(tooLazyForGoodVariableNames); //for some reason WorkflowKit only frees the uint8_t here, idk why
-  //error
- }
+-(void)preformShortcutDataExtractionWithCompletion:(void(^)(id, int, NSString * _Nullable, NSError*))comp {
+    if ([self signedShortcutData] || [self signedShortcutFileURL]) {
+        AAByteStream byteStream;
+        if ([self signedShortcutData]) {
+            byteStream = AAMemoryInputStreamOpen([[self signedShortcutData]bytes], [[self signedShortcutData]length]);
+        } else {
+            byteStream = AAFileStreamOpenWithPath([[self signedShortcutFileURL]fileSystemRepresentation], 0, 420);
+        }
+        if (byteStream) {
+            AEAContext context = AEAContextCreateWithEncryptedStream(byteStream);
+            if (context) {
+                size_t buf_size = 0;
+                int errorCode = AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, 0, 0, &buf_size);
+                if (errorCode == 0) {
+                    if (buf_size) {
+                        void *buffer = malloc(buf_size);
+                        if (AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, buf_size, buffer, 0) == 0) {
+                            NSData *authData = [NSData dataWithBytesNoCopy:buffer length:buf_size];
+                            WFShortcutSigningContext *signingContext = [WFShortcutSigningContext contextWithAuthData:authData];
+                            if (signingContext) {
+                                [signingContext validateWithCompletion:^(BOOL success, int options, NSString * _Nullable icId, NSError *validationError) {
+                                    if (success) {
+                                        SecKeyRef publicKey = [signingContext copyPublicKey];
+                                        if (publicKey) {
+                                            NSData *externalRep = (__bridge NSData*)SecKeyCopyExternalRepresentation(publicKey, nil);
+                                            if (AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_SIGNING_PUBLIC_KEY, AEA_CONTEXT_FIELD_REPRESENTATION_X963, [externalRep bytes], [externalRep length]) == 0) {
+                                                NSURL *daURL = [[self temporaryWorkingDirectoryURL]URLByAppendingPathComponent:[self directoryName]];
+                                                if ([[self fileManager] fileExistsAtPath:[daURL path] isDirectory:nil]) {
+                                                    [[self fileManager] createDirectoryAtURL:daURL withIntermediateDirectories:NO attributes:nil error:nil];
+                                                }
+                                                AAArchiveStream archiveStream = AAExtractArchiveOutputStreamOpen([daURL fileSystemRepresentation], nil, nil, 1, 0);
+                                                if (archiveStream) {
+                                                    AAByteStream decryptionInputStream = AEADecryptionInputStreamOpen(byteStream, context, 0, 0);
+                                                    AAArchiveStream decodeStream = AADecodeArchiveInputStreamOpen(decryptionInputStream, nil, nil, 0, 0);
+                                                    /* Extracting Signed Shortcut Data */
+                                                    size_t archiveEntries = AAArchiveStreamProcess(decodeStream, archiveStream, nil, nil, 0, 0);
+                                                    /* archiveEntries will return a negative error code if failure */
+                                                    if ((archiveEntries >= 0) && AAArchiveStreamClose(archiveStream)) {
+                                                        [daURL URLByAppendingPathComponent:@"Shortcut.wflow"];
+                                                        WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:daURL options:0x3 ofType:[WFFileType typeWithUTType:@"com.apple.shortcuts.workflow-file"] proposedFilename:[self fileName]];
+                                                        if (fileRep) {
+                                                            /* Signed Shortcut Data Extracted Successfully */
+                                                            comp(fileRep, options, icId, nil);
+                                                            AAArchiveStreamClose(decodeStream);
+                                                            AAByteStreamClose(decryptionInputStream);
+                                                        } else {
+                                                            /* Could not find the main shortcut Shortcut.wflow file in the archive */
+                                                            comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+                                                        }
+                                                    } else {
+                                                        comp(nil,0,nil,WFShortcutPackageFileFailedToExtractShortcutFileError());
+                                                    }
+                                                } else {
+                                                    comp(nil,0,nil,WFShortcutPackageFileFailedToExtractShortcutFileError());
+                                                }
+                                            } else {
+                                                /* error? */
+                                            }
+                                        } else {
+                                            comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+                                        }
+                                    } else {
+                                        /* error? */
+                                    }
+                                }];
+                            } else {
+                                comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+                            }
+                        } else {
+                            free(buffer);
+                            comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+                        }
+                    } else {
+                        comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+                    }
+                } else {
+                    comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+                }
+            } else {
+                comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+            }
+        } else {
+            /* Error */
+            comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
+        }
+    } else {
+        comp(nil,0,nil,[NSError errorWithDomain:NSCocoaErrorDomain code:0x4 userInfo:nil]);
+    }
 }
 -(id)initWithShortcutData:(id)arg0 shortcutName:(id)arg1 {
  self = [super init];
