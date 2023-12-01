@@ -1,11 +1,23 @@
+//
+//  WFShortcutSigningCertificate.h
+//  UnsigncutsApp
+//
+//  Created by Snoolie Keffaber on 2023/11/29.
+//
+
 #import <Foundation/Foundation.h>
+#import <Security/Security.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface WFShortcutSigningCertificate : NSObject
-@property (nonatomic) *__SecCertificate certificate;
 @property (readonly, nonatomic) NSString *commonName;
+-(SecKeyRef)copyPublicKey;
+-(NSData *)generateAuthData;
+-(instancetype)initWithCertificate:(SecCertificateRef)cert;
+-(instancetype)initWithCertificateData:(NSData *)data;
 @property (readonly, nonatomic) NSDate *expirationDate;
--(id)generateAuthData;
--(id)initWithCertificate:(struct __SecCertificate *)arg0 ;
--(id)initWithCertificateData:(id)arg0 ;
--(struct __SecKey *)copyPublicKey;
+@property (nonatomic) SecCertificateRef certificate;
 @end
+
+NS_ASSUME_NONNULL_END
