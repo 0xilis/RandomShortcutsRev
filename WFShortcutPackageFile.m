@@ -6,6 +6,47 @@
 //some things might be slightly innaccurate, not good with rev
 
 @implementation WFShortcutPackageFile
+-(NSString *)fileName {
+    return [[self sanitizedName] stringByAppendingPathExtension:@"shortcut"];
+}
+-(NSString *)directoryName {
+    return [[self sanitizedName] stringByAppendingPathExtension:@"shortcuts"];
+}
+@synthesize sanitizedName = _sanitizedName;
+-(NSString *)sanitizedName {
+    NSString *sanitizedName = _sanitizedName;
+    if (!sanitizedName) {
+        NSString *shortcutName = [self shortcutName];
+        NSRange range = [shortcutName rangeOfString:@"^[\\.](?=.*)" options:NSRegularExpressionSearch];
+        if ((range.location == 0) && (range.length != 0)) {
+            /* if . is first character replace it with _ */
+            shortcutName = [shortcutName stringByReplacingOccurrencesOfString:@"." withString:@"_" options:0 range:range];
+        }
+        shortcutName = [shortcutName stringByReplacingOccurrencesOfString:@":" withString:@""];
+        shortcutName = [shortcutName stringByReplacingOccurrencesOfString:@"/" withString:@":"];
+        _sanitizedName = shortcutName;
+    }
+    return sanitizedName;
+}
+-(NSURL *)generateDirectoryStructureInDirectory:(NSURL *)dir error:(NSError ** _Nullable)err {
+    NSURL *returnURL;
+    if ([self shortcutData]) {
+        NSURL *url = [dir URLByAppendingPathComponent:[self directoryName]];
+        returnURL = nil;
+        BOOL didSucceed = [[self fileManager] createDirectoryAtURL:url withIntermediateDirectories:NO attributes:nil error:err];
+        if (didSucceed) {
+            NSURL *writeToURL = [url URLByAppendingPathComponent:@"Shortcut.wflow"];
+            [[self shortcutData]writeToURL:writeToURL atomically:YES];
+            returnURL = url;
+        }
+    } else {
+        if (err) {
+            *err = WFShortcutPackageFileFailedToSignShortcutFileError();
+        }
+        returnURL = nil;
+    }
+    return returnURL;
+}
 -(void)generateSignedShortcutFileRepresentationWithAccount:(id)arg0 error:(id)arg1 {
   //highly unfinished reving so this method is wildly missing a lot of actual, just wanted to check private key and stuff
   //the arg0 passed in is by [WFP2PSignedShortcutFileExporter exportWorkflowWithCompletion:] and it's value is [SFAppleIDClient myAccountWithError:notimportant]
@@ -106,7 +147,7 @@ if (auth) {
                 int errorCode = AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, 0, 0, &buf_size);
                 if (errorCode == 0) {
                     if (buf_size) {
-                        void *buffer = malloc(buf_size);
+                        uint8_t *buffer = (uint8_t *)malloc(buf_size);
                         if (AEAContextGetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, 0, buf_size, buffer, 0) == 0) {
                             NSData *authData = [NSData dataWithBytesNoCopy:buffer length:buf_size];
                             WFShortcutSigningContext *signingContext = [WFShortcutSigningContext contextWithAuthData:authData];
@@ -118,7 +159,7 @@ if (auth) {
                                             NSData *externalRep = (__bridge NSData*)SecKeyCopyExternalRepresentation(publicKey, nil);
                                             if (AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_SIGNING_PUBLIC_KEY, AEA_CONTEXT_FIELD_REPRESENTATION_X963, [externalRep bytes], [externalRep length]) == 0) {
                                                 NSURL *daURL = [[self temporaryWorkingDirectoryURL]URLByAppendingPathComponent:[self directoryName]];
-                                                if ([[self fileManager] fileExistsAtPath:[daURL path] isDirectory:nil]) {
+                                                if (![[self fileManager] fileExistsAtPath:[daURL path] isDirectory:nil]) {
                                                     [[self fileManager] createDirectoryAtURL:daURL withIntermediateDirectories:NO attributes:nil error:nil];
                                                 }
                                                 AAArchiveStream archiveStream = AAExtractArchiveOutputStreamOpen([daURL fileSystemRepresentation], nil, nil, 1, 0);
@@ -126,9 +167,9 @@ if (auth) {
                                                     AAByteStream decryptionInputStream = AEADecryptionInputStreamOpen(byteStream, context, 0, 0);
                                                     AAArchiveStream decodeStream = AADecodeArchiveInputStreamOpen(decryptionInputStream, nil, nil, 0, 0);
                                                     /* Extracting Signed Shortcut Data */
-                                                    size_t archiveEntries = AAArchiveStreamProcess(decodeStream, archiveStream, nil, nil, 0, 0);
+                                                    ssize_t archiveEntries = AAArchiveStreamProcess(decodeStream, archiveStream, nil, nil, 0, 0);
                                                     /* archiveEntries will return a negative error code if failure */
-                                                    if ((archiveEntries >= 0) && AAArchiveStreamClose(archiveStream)) {
+                                                    if ((archiveEntries >= 0) && (AAArchiveStreamClose(archiveStream) >= 0)) {
                                                         [daURL URLByAppendingPathComponent:@"Shortcut.wflow"];
                                                         WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:daURL options:0x3 ofType:[WFFileType typeWithUTType:@"com.apple.shortcuts.workflow-file"] proposedFilename:[self fileName]];
                                                         if (fileRep) {
@@ -180,41 +221,45 @@ if (auth) {
         comp(nil,0,nil,[NSError errorWithDomain:NSCocoaErrorDomain code:0x4 userInfo:nil]);
     }
 }
--(id)initWithShortcutData:(id)arg0 shortcutName:(id)arg1 {
- self = [super init];
- if (self) {
-  self.shortcutData = arg0;
-  self.shortcutName = arg1;
- }
- return self;
+-(instancetype)initWithShortcutData:(NSData *)shortcutData shortcutName:(NSString *)name {
+    self = [super init];
+    if (self) {
+        _shortcutData = shortcutData;
+        _shortcutName = name;
+        [self commonInit];
+    }
+    return self;
 }
--(id)initWithSignedShortcutData:(id)arg0 shortcutName:(id)arg1 {
- self = [super init];
- if (self) {
-  self.signedShortcutData = arg0;
-  self.shortcutName = arg1;
- }
- return self;
+-(instancetype)initWithSignedShortcutData:(NSData *)shortcutData shortcutName:(NSString *)name {
+    self = [super init];
+    if (self) {
+        _signedShortcutData = shortcutData;
+        _shortcutName = name;
+        [self commonInit];
+    }
+    return self;
 }
--(id)initWithSignedShortcutFileURL:(id)arg0 {
- self = [super init];
- if (self) {
-  self.signedShortcutFileURL = arg0;
-  self.shortcutName = [[arg0 lastPathComponent]stringByDeletingPathExtension];
-  [self commonInit];
- }
- return self;
+-(instancetype)initWithSignedShortcutFileURL:(NSURL *)signedShortcutFileURL {
+    self = [super init];
+    if (self) {
+        _signedShortcutFileURL = signedShortcutFileURL;
+        _shortcutName = [[signedShortcutFileURL lastPathComponent]stringByDeletingPathExtension];
+        [self commonInit];
+    }
+    return self;
 }
--(void)commonInit
- self.temporaryWorkingDirectoryURL = [WFTemporaryFileManager createTemporaryDirectoryWithFilename:[[NSUUID UUID]UUIDString]];
- self.fileManager = [NSFileManager defaultManager];
- [[self fileManager] createDirectoryAtURL:[self temporaryWorkingDirectoryURL] withIntermediateDirectories:NO attributes:nil error:nil];
- self.executionQueue = dispatch_queue_create("com.apple.shortcuts.shorcut-package-file.execution-queue", NULL);
+-(void)commonInit {
+    NSURL *tempWorkingDir = [WFTemporaryFileManager createTemporaryDirectoryWithFilename:[[NSUUID UUID]UUIDString]];
+    _temporaryWorkingDirectoryURL = tempWorkingDir;
+    _fileManager = [NSFileManager defaultManager];
+    NSError* thisIsUnusedIThinkLol = nil;
+    [[self fileManager] createDirectoryAtURL:tempWorkingDir withIntermediateDirectories:NO attributes:nil error:&thisIsUnusedIThinkLol];
+    _executionQueue = dispatch_queue_create("com.apple.shortcuts.shorcut-package-file.execution-queue", 0);
 }
--(void)extractShortcutFileRepresentationWithCompletion:(id)arg0 {
- dispatch_async([self executionQueue], ^{
-  return [self preformShortcutDataExtractionWithCompletion:arg0];
- });
+-(void)extractShortcutFileRepresentationWithCompletion:(void(^)(id, long long, NSString * _Nullable, NSError*))comp {
+    dispatch_async([self executionQueue], ^{
+        [self preformShortcutDataExtractionWithCompletion:comp];
+    });
 }
 -(id)extractShortcutFileRepresentationWithSigningMethod:(*NSInteger)arg0 iCloudIdentifier:(*id)arg1 error:(NSError**)arg2 {
     //WIP!!!!!
