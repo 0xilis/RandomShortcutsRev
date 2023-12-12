@@ -5,47 +5,113 @@
 +(BOOL)isShortcutFileType:(WFFileType *)fileType {
  return [fileType conformsToUTTypes:[NSArray arrayWithObjects:@"com.apple.shortcut",@"com.apple.shortcuts.workflow-file",@"is.workflow.my.workflow",@"is.workflow.workflow"]];
 }
--(void)extractShortcutFile:(WFFileRepresentation*)shortcutFile completion:(id)completion {
- //log
- if ([[shortcutFile mappedData] length] <= 0x3) {
-  //error
- } else {
-  if ([[NSString wf_stringWithData:[[shortcutFile mappedData] subdataWithRange:NSMakeRange(0, 4)]] isEqualToString:@"AEA1"]) { //check that first 4 bytes are AEA1, if so, extractSignedShortcutFile, if not, if valid shortcut file type, extractWorkflowFile 
-   [self extractSignedShortcutFile:shortcutFile completion:completion];
-  } else {
-   if ([WFShortcutExtractor isShortcutFileType:[shortcutFile wfType]]) {
-    //used for unsigned shortcut files
-    [self extractWorkflowFile:shortcutFile completion:completion];
-   } else {
-    //error
-   }
-  }
- }
+-(void)extractShortcutWithCompletion:(id)comp {
+    /* Start extracting a shortcut from file */
+    if ([[self extractingURL]isFileURL] == NO) {
+        /* Found a remote shortcut URL */
+        [self extractRemoteShortcutFileAtURL:[self extractingURL] completion:comp];
+    } else if ([self extractingFile]) {
+        /* Found a shortcut file URL */
+        [self extractShortcutFile:[self extractingFile] completion:comp];
+    } else {
+        _extractingFile = [WFFileRepresentation fileWithURL:[self extractingURL] options:[self fileAdoptionOptions]];
+        if ([self extractingFile]) {
+            [self extractShortcutFile:[self extractingFile] completion:comp];
+        } else {
+            /* error */
+        }
+    }
 }
--(void)extractSignedShortcutFile:(WFFileRepresentation*)shortcutFile completion:(id)completion {
-    [self extractSignedShortcutFile:shortcutFile allowsRetryIfExpired:YES completion:completion];
+-(void)extractRemoteShortcutFileAtURL:(NSURL *)fileURL completion:(id)comp {
+    /* Downloading a remote shortcut file */
+    [[NSURLSession wf_sharedSession]downloadTaskWithURL:fileURL completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        if (location) {
+            WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:location options:0x3 ofType:0x0 proposedFilename:[response suggestedFilename]];
+            if (fileRep) {
+                [self extractShortcutFile:fileRep completion:comp];
+            } else {
+                /* error */
+            }
+        } else {
+            /* error */
+        }
+    }];
 }
--(void)extractWorkflowFile:(WFFileRepresentation*)shortcutFile completion:(id)completion {
- //log
- //this function is called when you are importing an unsigned shortcut file
- //basically, if you are running an internal build of voiceshortcuts (VCIsInternalBuild() is a function from VoiceShortcutsClient.framework)
- //then WFShortcutFileSharingEnabled is actually checked, if yes you can import it
- //however, more than likely - you are not running an internal build :P.
- //so, another value that is also checked is [self allowsOldFormatFile]
- //TMK this always returns false as of now
- if ((VCIsInternalBuild() && [WFSharingSettings shortcutFileSharingEnabled]) || [self allowsOldFormatFile]) {
-  NSString *workflowName = [self suggestedName];
-  if (!workflowName) {
-    workflowName = [shortcutFile wfName];
-  }
-  [self extractWorkflowFile:shortcutFile shortcutName:workflowName shortcutFileContentType:0x0 iCloudIdentifier:nil completion:completion];
- } else {
-  [WFSharingSettings shortcutFileSharingDisabledError];
- }
+-(void)extractShortcutFile:(WFFileRepresentation *)fileRep completion:(id)comp {
+    /* Extracting a shortcut from file */
+    NSData *mappedData = [fileRep mappedData];
+    if ([mappedData length] <= 3) {
+        /* error */
+    } else {
+        NSString *fileSignature = [NSString wf_stringWithData:[mappedData subdataWithRange:NSMakeRange(0, 4)]];
+        if ([fileSignature isEqualToString:@"AEA1"]) {
+            [self extractSignedShortcutFile:fileRep completion:comp];
+        } else {
+            if ([WFShortcutExtractor isShortcutFileType:[fileRep wfType]]) {
+                [self extractWorkflowFile:fileRep completion:comp];
+            } else {
+                /* error */
+            }
+        }
+    }
 }
--(void)extractSignedShortcutFile:(WFFileRepresentation*)shortcutFile allowsRetryIfExpired:(BOOL)allowRetry completion:(id)completion {
- //log
- [[[WFShortcutPackageFile alloc]initWithSignedShortcutFileURL:[shortcutFile fileURL]]extractShortcutFileRepresentationWithCompletion://wip]; //completion block is not yet implemented here but basically it checks that shortcutFileContentType is 0x1/0x2/0x3, if not it makes it 0xffffffffffffffff, and calls extractWorkflowFile:shortcutName:shortcutFileContentType:iCloudIdentifier:completion: 
+-(void)extractSignedShortcutFile:(WFFileRepresentation *)fileRep completion:(id)comp {
+    [self extractSignedShortcutFile:fileRep allowsRetryIfExpired:YES completion:comp];
+}
+-(void)extractSignedShortcutFile:(WFFileRepresentation *)fileRep allowsRetryIfExpired:(BOOL)retry completion:(id)comp {
+    /* Extracting a signed shortcut format file */
+    WFShortcutPackageFile *package = [[WFShortcutPackageFile alloc]initWithSignedShortcutFileURL:[fileRep fileURL]];
+    [package extractShortcutFileRepresentationWithCompletion:^(WFFileRepresentation *outFileRep, long long scFileTypeArg, NSString * icloudId, NSError *err) {
+        long long scFileType;
+        if (scFileTypeArg == 1) {
+            scFileType = 1;
+            if (outFileRep) {
+                NSString *suggestedName = [self suggestedName];
+                if (!suggestedName) {
+                    suggestedName = [fileRep wfName];
+                }
+                [self extractWorkflowFile:outFileRep shortcutName:suggestedName shortcutFileContentType:scFileType iCloudIdentifier:icloudId completion:comp];
+            } else {
+                /* Expired cert */
+                if (icloudId) {
+                    /* Found an iCloud Signed Shortcut File with expired certificate. Trying to download a new one from iCloud */
+                }
+            }
+        } else {
+            if (scFileTypeArg == 3) {
+                scFileType = 3;
+            } else if (scFileTypeArg == 2) {
+                scFileType = 2;
+            } else {
+                scFileType = -1;
+            }
+            if (outFileRep) {
+                NSString *suggestedName = [self suggestedName];
+                if (!suggestedName) {
+                    suggestedName = [fileRep wfName];
+                }
+                [self extractWorkflowFile:outFileRep shortcutName:suggestedName shortcutFileContentType:scFileType iCloudIdentifier:icloudId completion:comp];
+            } else {
+                /* call completion with err */
+            }
+        }
+        
+    }];
+}
+-(void)extractWorkflowFile:(WFFileRepresentation *)fileRep completion:(id)comp {
+    /* Extracting an old shortcut format file */
+    /* VCIsInternalBuild() is a function from VoiceShortcutsClient.framework */
+    if ((VCIsInternalBuild() && [WFSharingSettings shortcutFileSharingEnabled]) || [self allowsOldFormatFile]) {
+        NSString *suggestedName = [self suggestedName];
+        if (suggestedName) {
+            [self extractWorkflowFile:fileRep shortcutName:suggestedName shortcutFileContentType:0 iCloudIdentifier:nil completion:comp];
+        } else {
+            NSString *wfName = [fileRep wfName];
+            [self extractWorkflowFile:fileRep shortcutName:wfName shortcutFileContentType:0 iCloudIdentifier:nil completion:comp];
+        }
+    } else {
+        /* [WFSharingSettings shortcutFileSharingDisabledError]; */
+    }
 }
 -(void)extractWorkflowFile:(WFFileRepresentation*)shortcutFile shortcutName:(NSString *)name shortcutFileContentType:(NSInteger)shortcutType iCloudIdentifier:(id)shortcutIdentifier completion:(id)completion {
  NSError* err = nil;
