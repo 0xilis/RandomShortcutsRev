@@ -95,88 +95,65 @@
   return YES;
  }
 }
--(BOOL)validateAppleIDCertificatesWithError:(*id)arg0 {
- //log
- NSArray *signingCertificateChain = [self appleIDCertificateChain];
- //FYI: This part of the method is NOT CORRECT at all bc i have no idea how if_map works lol sorry
- NSArray* certificates = [signingCertificateChain if_map:^{
-  [signingCertificateChain certificate]; //WFShortcutSigningCertificate
- }];
- 
- if (!certificates) {
-  //i am so fucking confused
-  return validateAppleIDCert(0xffffffffffffe5cf, 0x0); //isValid will be 0
- }
- SecPolicyRef policy = SecPolicyCreateAppleIDAuthorityPolicy();
- SecPolicyCreateAppleIDAuthorityPolicy(policy, kSecPolicyCheckTemporalValidity, kCFBooleanFalse);
- if (!policy) {
-  return validateAppleIDCert(0xffffffffffffe596, 0x0);
- }
- id something = 0;
- OSStatus status = SecTrustCreateWithCertificates(certificates, policy, &something);
- if (status) {
-  //error, Signed Shortcut File Apple ID Certificate Chain Verification: SecTrustCreateWithCertificates failed with error %d
-  return validateAppleIDCert(0xffffffffffffe596, 0x0);
- }
- 
- if (!something) {
-  return validateAppleIDCert(0xffffffffffffe596, 0x0);
- }
- 
- if (!SecTrustEvaluateWithError()) {
-  CFErrorDomain cfError = CFErrorGetDomain(0x0);
-  if (CFEqual(cfError, NSOSStatusErrorDomain)) {
-   if (CFErrorGetCode(0x0) == 0xfffffffffffef716) {
-    return validateAppleIDCert(0x0, 0x1);
-   } else {
-    //error
-   }
-  } else {
-   //error
-  }
- } else {
-  return validateAppleIDCert(0x0, 0x1);
- }
- 
-}
-static inline __attribute__((always_inline)) BOOL validateAppleIDCert(long arg0, long arg1) {
- long something = -6700; //Too lazy to just 
- if (arg0) {
-  something = arg0;
- }
- if (arg1) {
-  something = arg1;
- }
- BOOL isValid = !something & arg1;
- if (isValid) {
-  //log
-  return YES;
- } else {
-  //error
- }
+-(BOOL)validateAppleIDCertificatesWithError:(NSError**)err {
+    /* I haven't bothered to fill err yet but validation should be identical */
+    NSArray <WFShortcutSigningCertificate *>* signingCertificateChain = [self appleIDCertificateChain];
+    /* if_map is from IntentsFoundation.framework */
+    NSArray* certificates = [signingCertificateChain if_map:^(WFShortcutSigningCertificate *item){
+      [item certificate]; //WFShortcutSigningCertificate
+    }];
+    if (certificates) {
+        SecPolicyRef policy = SecPolicyCreateAppleIDAuthorityPolicy();
+        SecPolicySetOptionsValue(policy,kSecPolicyCheckTemporalValidity,kCFBooleanFalse);
+        if (policy) {
+            SecTrustRef trust;
+            OSStatus res = SecTrustCreateWithCertificates((__bridge CFArrayRef)certificates, policy, &trust);
+            if (res == 0) {
+                if (trust) {
+                    CFErrorRef trustErr;
+                    if (SecTrustEvaluateWithError(trust, &trustErr) == 0) {
+                        CFErrorDomain domain = CFErrorGetDomain(trustErr);
+                        if (CFEqual(domain, NSOSStatusErrorDomain)) {
+                            if (CFErrorGetCode(trustErr) == errSecCertificateExpired) {
+                                /* cert is valid if we reached here */
+                                return YES;
+                            }
+                        }
+                    } else {
+                        /* cert is valid if we reached here */
+                        return YES;
+                    }
+                }
+            }
+        }
+    }
+    return NO;
 }
 /* This function is called in preformShortcutDataExtractionWithCompletion */
--(void)validateWithCompletion:(id yesIKnowCompletionBlocksAreNotLikeThisIWillFixThisLaterIfIStillCare) {
- id result;
- id appleIDCertificateChain = [self appleIDCertificateChain];
- if (appleIDCertificateChain) {
-  NSError **error = nil;
-  result = [self validateAppleIDCertificatesWithError:&error];
-  if (result) {
-   id validationRecord = [self appleIDValidationRecord];
-   if (!validationRecord) {
-    //error
-    return;
-   }
-   /* verify that altDSID is same (self-signed) or user is in contacts (contact-signed) */
-   [self validateAppleIDValidationRecordWithCompletion:completion];
-   return;
-  }
- } else {
-  id nope = nil;
-  NSError **error = nil;
-  result = [self validateSigningCertificateChainWithICloudIdentifier:&nope error:&error];
- }
- completion(result);
+-(void)validateWithCompletion:(void(^)(BOOL success, int options, NSString * _Nullable icId, NSError *validationError))comp {
+    NSArray *appleIDCertificateChain = [self appleIDCertificateChain];
+    if (appleIDCertificateChain) {
+        NSError *err = nil;
+        BOOL result = [self validateAppleIDCertificatesWithError:&err];
+        if (!result) {
+            comp(result, 0, nil, err);
+            return;
+        }
+        SFAppleIDValidationRecord *appleIDValidationRecord = [self appleIDValidationRecord];
+        if (!appleIDValidationRecord) {
+            /* error */
+            comp(NO, 0, nil, [NSError errorWithDomain:@"WFWorkflowErrorDomain" code:0x5 userInfo:@{
+                NSLocalizedDescriptionKey : WFLocalizedString(@"Failed to extract the shortcut file data"),
+            }]);
+            return;
+        }
+        [self validateAppleIDValidationRecordWithCompletion:comp];
+        return;
+    } else {
+        NSString *icloudId = nil;
+        NSError *err = nil;
+        BOOL result = [self validateSigningCertificateChainWithICloudIdentifier:&icloudId error:&err];
+        comp(result, 1, icloudId, err);
+    }
 }
 @end
