@@ -68,7 +68,7 @@ if (auth) {
   AEAContext context = AEAContextCreateWithProfile(0);
   if (context) {
    //block saved here
-   if (AEAContextSetFieldUInt(context, AEA_CONTEXT_FIELD_COMPRESSION_ALGORITHM, 2049)) {
+   if (AEAContextSetFieldUInt(context, AEA_CONTEXT_FIELD_COMPRESSION_ALGORITHM, AA_COMPRESSION_ALGORITHM_LZFSE)) {
     //error
    } else {
     CFDataRef data = SecKeyCopyExternalRepresentation(arg0, 0);
