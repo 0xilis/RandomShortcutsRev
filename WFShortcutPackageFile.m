@@ -47,63 +47,75 @@
     }
     return returnURL;
 }
--(void)generateSignedShortcutFileRepresentationWithAccount:(id)arg0 error:(id)arg1 {
-  //highly unfinished reving so this method is wildly missing a lot of actual, just wanted to check private key and stuff
-  //the arg0 passed in is by [WFP2PSignedShortcutFileExporter exportWorkflowWithCompletion:] and it's value is [SFAppleIDClient myAccountWithError:notimportant]
-  //SDAppleIDClient is from the Sharing.framework PrivateFramework
-  id log = getWFSecurityLogObject();
-  NSMutableDictionary *mutableDict = [NSMutableDictionary dictionary];
-  [daKey setObject:(__bridge id)kSecAttrKeyTypeECSECPrimeRandom forKey:(__bridge id)kSecAttrKeyType];
-  [daKey setObject:0x6469b0 forKey:(__bridge id)kSecAttrKeySizeInBits];
-  [daKey setObject:@NO forKey:(__bridge id)kSecAttrIsPermanent];
-  SecKeyRef daKey = SecKeyCreateRandomKey(mutableDict, 0);
-  [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:[WFShortcutSigningContext contextWithAppleIDAccount:arg0 signingKey:daKey] error:0];
+-(WFFileRepresentation *)generateSignedShortcutFileRepresentationWithAccount:(id)account error:(NSError**)err {
+    /* TODO: Implement logs + errors, for now this decomp doesn't handle errors/logs at all */
+    //highly unfinished reving so this method is wildly missing a lot of actual, just wanted to check private key and stuff
+    //the arg0 passed in is by [WFP2PSignedShortcutFileExporter exportWorkflowWithCompletion:] and it's value is [SFAppleIDClient myAccountWithError:notimportant]
+    //SDAppleIDClient is from the Sharing.framework PrivateFramework
+    NSMutableDictionary *mutableDict = [NSMutableDictionary dictionary];
+    mutableDict[(__bridge id)kSecAttrKeyType] = (__bridge id)kSecAttrKeyTypeECSECPrimeRandom;
+#if 0
+    mutableDict[(__bridge id)kSecAttrKeySizeInBits] = (__bridge id)0x6469b0;
+#else
+    mutableDict[(__bridge id)kSecAttrKeySizeInBits] = @6580656;
+#endif
+    mutableDict[(__bridge id)kSecAttrIsPermanent] = @NO;
+    SecKeyRef daKey = SecKeyCreateRandomKey((__bridge CFDictionaryRef)mutableDict, 0);
+    WFShortcutSigningContext *signingContext = [WFShortcutSigningContext contextWithAppleIDAccount:account signingKey:daKey];
+    return [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:signingContext error:0];
 }
--(void)generateSignedShortcutFileRepresentationWithPrivateKey:(id)arg0 signingContext:(id)arg1 error:(id)arg2 {
-id auth = [arg1 generateAuthData]; //WFShortcutSigningContext
-if (auth) {
- NSURL *tempURL = [self temporaryWorkingDirectoryURL];
- id directoryStructure = [self generateDirectoryStructureInDirectory:tempURL error:arg2];
- if (directoryStructure) {
-  AEAContext context = AEAContextCreateWithProfile(0);
-  if (context) {
-   //block saved here
-   if (AEAContextSetFieldUInt(context, AEA_CONTEXT_FIELD_COMPRESSION_ALGORITHM, AA_COMPRESSION_ALGORITHM_LZFSE)) {
-    //error
-   } else {
-    CFDataRef data = SecKeyCopyExternalRepresentation(arg0, 0);
-    if (data) {
-     if (AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_SIGNING_PRIVATE_KEY, AEA_CONTEXT_FIELD_REPRESENTATION_X963, [data bytes], [data length])) {
-      //error
-     } else {
-      AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, [auth bytes], [auth length]);
-      NSURL *daURL = [[[self temporaryWorkingDirectoryURL] URLByAppendingPathComponent:[self fileName]]fileSystemRepresentation]; //im amazing at var names
-      AAByteStream byteStream = AAFileStreamOpenWithPath(daURL, O_CREAT | O_RDWR, 0420);
-      AEAEncryptionOutputStreamOpen(byteStream, context, 0, 0);
-      AAFieldKeySet fieldKeySet = AAFieldKeySetCreateWithString("TYP,PAT,LNK,DEV,DAT,MOD,FLG,MTM,BTM,CTM,HLC,CLC");
-      if (fieldKeySet) {
-       AAPathList pathList = AAPathListCreateWithDirectoryContents([directoryStructure fileSystemRepresentation], 0, 0, 0, 0, 0);
-       if (pathList) {
-        AAArchiveStream archiveStream = AAEncodeArchiveOutputStreamOpen(outputStream, 0, 0, 0, 0);
-        if (archiveStream) {
-         if (AAArchiveStreamWritePathList(archiveStream,pathList, fieldKeySet, [directoryStructure fileSystemRepresentation], 0, 0, 0, 0)) {
-          //error
-         } else {
-          AAArchiveStreamClose(archiveStream);
-          AAByteStreamClose(outputStream);
-          AAByteStreamClose(byteStream);
-          [WFFileRepresentation fileWithURL:daURL options:0x3 ofType:0x0 proposedFileName:[self sanitizedName]];
-          [[self fileManager]removeItemAtURL:daURL error:0];
-         }
+
+#ifndef COMPRESSION_LZFSE
+#define COMPRESSION_LZFSE 0x801
+#endif
+
+-(WFFileRepresentation *)generateSignedShortcutFileRepresentationWithPrivateKey:(SecKeyRef)daKey signingContext:(WFShortcutSigningContext *)signingContext error:(NSError**)err {
+    /* TODO: Implement logs + errors, for now this decomp doesn't handle errors/logs at all */
+    NSData *authData = [signingContext generateAuthData];
+    if (authData) {
+        NSURL *url = [self generateDirectoryStructureInDirectory:[self temporaryWorkingDirectoryURL] error:err];
+        if (url) {
+            AEAContext context = AEAContextCreateWithProfile(0);
+            if (context) {
+                if (AEAContextSetFieldUInt(context, AEA_CONTEXT_FIELD_COMPRESSION_ALGORITHM, COMPRESSION_LZFSE) == 0) {
+                    CFErrorRef cferr = 0;
+                    NSData *key = (__bridge NSData *)SecKeyCopyExternalRepresentation(daKey, &cferr);
+                    if (key) {
+                        if (AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_SIGNING_PRIVATE_KEY, AEA_CONTEXT_FIELD_REPRESENTATION_X963, [key bytes], [key length]) == 0) {
+                            AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, [authData bytes], [authData length]);
+                            NSURL *fileURL = [[self temporaryWorkingDirectoryURL]URLByAppendingPathComponent:[self fileName]];
+                            const char *path = [fileURL fileSystemRepresentation];
+                            AAByteStream byteStream = AAFileStreamOpenWithPath(path,O_CREAT | O_RDWR, 0420);
+                            AAByteStream encryptedStream = AEAEncryptionOutputStreamOpen(byteStream, context, 0, 0);
+                            AAFieldKeySet fields = AAFieldKeySetCreateWithString("TYP,PAT,LNK,DEV,DAT,MOD,FLG,MTM,BTM,CTM,HLC,CLC");
+                            if (fields) {
+                                const char *dir = [url fileSystemRepresentation];
+                                AAPathList pathList = AAPathListCreateWithDirectoryContents(dir, 0, 0, 0, 0, 0);
+                                if (pathList) {
+                                    AAArchiveStream archiveStream = AAEncodeArchiveOutputStreamOpen(encryptedStream, 0, 0, 0, 0);
+                                    if (archiveStream) {
+                                        if (AAArchiveStreamWritePathList(archiveStream, pathList, fields, [url fileSystemRepresentation], 0, 0, 0, 0) == 0) {
+                                            AAArchiveStreamClose(archiveStream);
+                                            AAByteStreamClose(encryptedStream);
+                                            AAByteStreamClose(byteStream);
+                                            WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:fileURL options:0x3 ofType:0x0 proposedFilename:[self sanitizedName]];
+                                            [[self fileManager]removeItemAtURL:fileURL error:nil];
+                                            /* The original implementation has these in blocks but eh */
+                                            AAPathListDestroy(pathList);
+                                            AAFieldKeySetDestroy(fields);
+                                            AEAContextDestroy(context);
+                                            return fileRep;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-       }
-      }
-     }
     }
-   }
-  }
- }
-}
+    return nil;
 }
 -(NSURL *)generateDirectoryStructureInDirectory:(NSURL *)dir error:(NSError ** _Nullable)err {
     NSURL *returnURL;
