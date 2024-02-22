@@ -156,4 +156,95 @@
         comp(result, 1, icloudId, err);
     }
 }
++(WFShortcutSigningContext *)contextWithAuthData:(NSData *)authData {
+    NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:authData options:0 format:0 error:nil];
+    if (dict && [dict isKindOfClass:[NSDictionary class]]) {
+        NSArray *signingCertChain = dict[@"SigningCertificateChain"];
+        if (signingCertChain && [dict isKindOfClass:[NSArray class]]) {
+            NSArray *compactMapSigningCertChain = [signingCertChain if_compactMap:^(NSData *data){
+                return [[WFShortcutSigningCertificate alloc]initWithCertificateData:data];
+            }];
+            if ([compactMapSigningCertChain count] == [signingCertChain count]) {
+                return [self contextWithSigningCertificateChain:compactMapSigningCertChain];
+            } else {
+                return nil;
+            }
+        } else {
+            NSArray *appleIDCertChain = dict[@"AppleIDCertificateChain"];
+            if (appleIDCertChain) {
+                /* this method seems to get AppleIDCertificateChain twice? */
+                appleIDCertChain = dict[@"AppleIDCertificateChain"];
+                if (appleIDCertChain && [appleIDCertChain isKindOfClass:[NSArray class]]) {
+                    NSArray *compactMapAppleIDCertChain = [appleIDCertChain if_compactMap:^(NSData *data){
+                        return [[WFShortcutSigningCertificate alloc]initWithCertificateData:data];
+                    }];
+                    if ([compactMapAppleIDCertChain count] == [appleIDCertChain count]) {
+                        NSData *signingPublicKey = dict[@"SigningPublicKey"];
+                        if (![signingPublicKey isKindOfClass:[NSData class]]) {
+                            signingPublicKey = nil;
+                        }
+                        NSData *signingPublicKeySignature = dict[@"SigningPublicKeySignature"];
+                        if (![signingPublicKeySignature isKindOfClass:[NSData class]]) {
+                            signingPublicKeySignature = nil;
+                        }
+                        SecKeyRef publicKey = [[compactMapAppleIDCertChain firstObject]copyPublicKey];
+                        SecKeyCreateWithData((__bridge CFDataRef)signingPublicKey, (__bridge CFDictionaryRef)@{
+                            (__bridge NSString *)kSecAttrKeyType : (__bridge NSString *)kSecAttrKeyTypeECSECPrimeRandom,
+                            (__bridge NSString *)kSecAttrKeyClass : (__bridge NSString *)kSecAttrKeyClassPublic,
+                        }, nil);
+                        Boolean isVerified = SecKeyVerifySignature(publicKey, kSecKeyAlgorithmRSASignatureMessagePSSSHA256, (__bridge CFDataRef)signingPublicKey, (__bridge CFDataRef)signingPublicKeySignature, nil);
+                        if (isVerified) {
+                            SFAppleIDValidationRecord *appleIDValidationRecord = dict[@"AppleIDValidationRecord"];
+                            if (appleIDValidationRecord) {
+                                /* also checked for twice? */
+                                appleIDValidationRecord = dict[@"AppleIDValidationRecord"];
+                                if (appleIDValidationRecord) {
+                                   /* finish later */
+                                }
+                            } else {
+                                /* error? */
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /* error */
+    return nil;
+}
+-(instancetype)initWithAppleIDValidationRecord:(SFAppleIDValidationRecord *)record appleIDCertificateChain:(NSArray *)chain signingPublicKey:(SecKeyRef)pubKey signingPublicKeyData:(NSData *)data {
+    self = [super init];
+    if (self) {
+        self->_appleIDValidationRecord = record;
+        self->_signingCertificateChain = chain;
+        self->_signingPublicKey = pubKey;
+        self->_signingPublicKeySignature = data;
+    }
+    return self;
+}
++(WFShortcutSigningContext *)contextWithAppleIDAccount:(SFAppleIDAccount *)account signingKey:(SecKeyRef)key {
+    /* TODO: Implement logs + errors, for now this decomp doesn't handle errors/logs at all */
+    SFAppleIDIdentity *identity = [account identity];
+    if (identity) {
+        OpaqueSecCertificateRef cert = [[account identity]copyCertificate];
+        OpaqueSecCertificateRef intercert = [[account identity]copyIntermediateCertificate];
+        if (cert) {
+            if (intercert) {
+                WFShortcutSigningCertificate *appleIDCert = [[WFShortcutSigningCertificate alloc] initWithCertificate:cert];
+                WFShortcutSigningCertificate *appleIDCert2 = [[WFShortcutSigningCertificate alloc] initWithCertificate:copyIntermediateCertificate];
+                OpaqueSecKeyRef privateKey = [identity copyPrivateKey];
+                if (privateKey) {
+                    SecKeyRef pubKey = SecKeyCopyPublicKey(key);
+                    CFDataRef data = SecKeyCopyExternalRepresentation(pubKey);
+                    NSData *signature = (__bridge NSData *)SecKeyCreateSignature(privateKey, kSecKeyAlgorithmRSASignatureMessagePSSSHA256, data, 0);
+                    return [[self alloc]initWithAppleIDValidationRecord:[account validationRecord] appleIDCertificateChain:@[
+                        appleIDCert,
+                        appleIDCert2
+                    ] signingPublicKey:pubKey signingPublicKeyData:signature];
+                }
+            }
+        }
+    }
+}
 @end
