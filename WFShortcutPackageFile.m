@@ -3,8 +3,6 @@
 #import <AppleArchive/AEADefs.h>
 #import "WFShortcutPackageFile.h"
 
-//some things might be slightly innaccurate, not good with rev
-
 @implementation WFShortcutPackageFile
 -(NSString *)fileName {
     return [[self sanitizedName] stringByAppendingPathExtension:@"shortcut"];
@@ -48,21 +46,24 @@
     return returnURL;
 }
 -(WFFileRepresentation *)generateSignedShortcutFileRepresentationWithAccount:(id)account error:(NSError**)err {
-    /* TODO: Implement logs + errors, for now this decomp doesn't handle errors/logs at all */
-    //highly unfinished reving so this method is wildly missing a lot of actual, just wanted to check private key and stuff
-    //the arg0 passed in is by [WFP2PSignedShortcutFileExporter exportWorkflowWithCompletion:] and it's value is [SFAppleIDClient myAccountWithError:notimportant]
-    //SDAppleIDClient is from the Sharing.framework PrivateFramework
+    WFSecurityLog("Generating Signed Shortcut Data with AppleID information");
     NSMutableDictionary *mutableDict = [NSMutableDictionary dictionary];
     mutableDict[(__bridge id)kSecAttrKeyType] = (__bridge id)kSecAttrKeyTypeECSECPrimeRandom;
-#if 0
-    mutableDict[(__bridge id)kSecAttrKeySizeInBits] = (__bridge id)0x6469b0;
-#else
-    mutableDict[(__bridge id)kSecAttrKeySizeInBits] = @6580656;
-#endif
+    mutableDict[(__bridge id)kSecAttrKeySizeInBits] = @256; /* I *hope* this is correct... */
     mutableDict[(__bridge id)kSecAttrIsPermanent] = @NO;
     SecKeyRef daKey = SecKeyCreateRandomKey((__bridge CFDictionaryRef)mutableDict, 0);
     WFShortcutSigningContext *signingContext = [WFShortcutSigningContext contextWithAppleIDAccount:account signingKey:daKey];
-    return [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:signingContext error:0];
+    NSError *signingError = nil;
+    WFFileRepresentation *signedShortcut = [self generateSignedShortcutFileRepresentationWithPrivateKey:daKey signingContext:signingContext error:&signingError];
+    if (signedShortcut) {
+        WFSecurityInfo("Generated Signed Shortcut Data with AppleID information Successfully");
+    } else {
+        WFSecurityErrorF("Failed to generate Signed Shortcut Data with AppleID information: %@",signingError);
+        if (err) {
+            *err = signingError;
+        }
+    }
+    return signedShortcut;
 }
 
 #ifndef COMPRESSION_LZFSE
@@ -70,7 +71,16 @@
 #endif
 
 -(WFFileRepresentation *)generateSignedShortcutFileRepresentationWithPrivateKey:(SecKeyRef)daKey signingContext:(WFShortcutSigningContext *)signingContext error:(NSError**)err {
-    /* TODO: Implement logs + errors, for now this decomp doesn't handle errors/logs at all */
+    /*
+     * PROBABLY BUG(?):
+     *
+     * WorkflowKit opens a byte stream, encryption stream, and archive stream here.
+     * However, this method only closes the streams if signing was successful.
+     * This means that certain errors will cause an open stream to never be closed.
+     * This is present in iOS 15.2, not sure about past versions.
+     */
+    /* The original implementation has the destroy functions for archives in blocks but eh */
+    WFFileRepresentation *fileRep = nil;
     NSData *authData = [signingContext generateAuthData];
     if (authData) {
         NSURL *url = [self generateDirectoryStructureInDirectory:[self temporaryWorkingDirectoryURL] error:err];
@@ -85,7 +95,7 @@
                             AEAContextSetFieldBlob(context, AEA_CONTEXT_FIELD_AUTH_DATA, AEA_CONTEXT_FIELD_REPRESENTATION_RAW, [authData bytes], [authData length]);
                             NSURL *fileURL = [[self temporaryWorkingDirectoryURL]URLByAppendingPathComponent:[self fileName]];
                             const char *path = [fileURL fileSystemRepresentation];
-                            AAByteStream byteStream = AAFileStreamOpenWithPath(path,O_CREAT | O_RDWR, 0420);
+                            AAByteStream byteStream = AAFileStreamOpenWithPath(path,O_CREAT | O_RDWR, 420);
                             AAByteStream encryptedStream = AEAEncryptionOutputStreamOpen(byteStream, context, 0, 0);
                             AAFieldKeySet fields = AAFieldKeySetCreateWithString("TYP,PAT,LNK,DEV,DAT,MOD,FLG,MTM,BTM,CTM,HLC,CLC");
                             if (fields) {
@@ -98,24 +108,68 @@
                                             AAArchiveStreamClose(archiveStream);
                                             AAByteStreamClose(encryptedStream);
                                             AAByteStreamClose(byteStream);
-                                            WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:fileURL options:0x3 ofType:0x0 proposedFilename:[self sanitizedName]];
+                                            fileRep = [WFFileRepresentation fileWithURL:fileURL options:0x3 ofType:0x0 proposedFilename:[self sanitizedName]];
                                             [[self fileManager]removeItemAtURL:fileURL error:nil];
-                                            /* The original implementation has these in blocks but eh */
-                                            AAPathListDestroy(pathList);
-                                            AAFieldKeySetDestroy(fields);
-                                            AEAContextDestroy(context);
-                                            return fileRep;
+                                        } else {
+                                            if (err) {
+                                                *err = WFShortcutPackageFileFailedToSignShortcutFileError();
+                                            }
+                                        }
+                                    } else {
+                                        if (err) {
+                                            *err = WFShortcutPackageFileFailedToSignShortcutFileError();
                                         }
                                     }
+                                    AAPathListDestroy(pathList);
+                                } else {
+                                    if (err) {
+                                        *err = WFShortcutPackageFileFailedToSignShortcutFileError();
+                                    }
+                                }
+                                AAFieldKeySetDestroy(fields);
+                            } else {
+                                /*
+                                 * PROBABLY BUG:(?)
+                                 *
+                                 * If the field key set couldn't be created,
+                                 * BUT the byte streams opened,
+                                 * They will not be closed.
+                                 */
+                                if (err) {
+                                    *err = WFShortcutPackageFileFailedToSignShortcutFileError();
                                 }
                             }
+                        } else {
+                            if (err) {
+                                *err = WFShortcutPackageFileFailedToSignShortcutFileError();
+                            }
+                        }
+                    } else {
+                        if (err) {
+                            /* For some reason WFShortcutPackageFileFailedToSignShortcutFileError is inlined here, and only here ??? */
+                            *err = [NSError errorWithDomain:@"WFWorkflowErrorDomain" code:0x4 userInfo:@{
+                                NSLocalizedDescriptionKey : WFLocalizedString(@"Failed to sign shortcut"),
+                            }];
                         }
                     }
+                } else {
+                    if (err) {
+                        *err = WFShortcutPackageFileFailedToSignShortcutFileError();
+                    }
+                }
+                AEAContextDestroy(context);
+            } else {
+                if (err) {
+                    *err = WFShortcutPackageFileFailedToSignShortcutFileError();
                 }
             }
         }
+    } else {
+        if (err) {
+            *err = WFShortcutPackageFileInvalidShortcutFileError();
+        }
     }
-    return nil;
+    return fileRep;
 }
 -(NSURL *)generateDirectoryStructureInDirectory:(NSURL *)dir error:(NSError ** _Nullable)err {
     NSURL *returnURL;
@@ -136,15 +190,16 @@
     }
     return returnURL;
 }
--(void)extractShortcutFileRepresentationWithSigningMethod:(id)arg0 error:(id)arg1 {
-    [self extractShortcutFileRepresentationWithSigningMethod:arg0 iCloudIdentifier:0 error:arg1];
+-(void)extractShortcutFileRepresentationWithSigningMethod:(id)signingMethod error:(NSError **)err {
+    [self extractShortcutFileRepresentationWithSigningMethod:signingMethod iCloudIdentifier:0 error:err];
     return;
 }
--(void)extractShortcutFileRepresentationWithError:(id)arg0 {
-    [self extractShortcutFileRepresentationWithSigningMethod:0 error:arg0];
+-(void)extractShortcutFileRepresentationWithError:(NSError **)err {
+    [self extractShortcutFileRepresentationWithSigningMethod:0 error:err];
     return;
 }
--(void)preformShortcutDataExtractionWithCompletion:(void(^)(id, int, NSString * _Nullable, NSError*))comp {
+-(void)preformShortcutDataExtractionWithCompletion:(void(^)(id, long long, NSString * _Nullable, NSError*))comp {
+    WFSecurityLog("Extracting Signed Shortcut Data");
     if ([self signedShortcutData] || [self signedShortcutFileURL]) {
         AAByteStream byteStream;
         if ([self signedShortcutData]) {
@@ -179,21 +234,25 @@
                                                     AAByteStream decryptionInputStream = AEADecryptionInputStreamOpen(byteStream, context, 0, 0);
                                                     AAArchiveStream decodeStream = AADecodeArchiveInputStreamOpen(decryptionInputStream, nil, nil, 0, 0);
                                                     /* Extracting Signed Shortcut Data */
+                                                    WFSecurityInfo("Extracting Signed Shortcut Data");
                                                     ssize_t archiveEntries = AAArchiveStreamProcess(decodeStream, archiveStream, nil, nil, 0, 0);
                                                     /* archiveEntries will return a negative error code if failure */
                                                     if ((archiveEntries >= 0) && (AAArchiveStreamClose(archiveStream) >= 0)) {
                                                         [daURL URLByAppendingPathComponent:@"Shortcut.wflow"];
                                                         WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:daURL options:0x3 ofType:[WFFileType typeWithUTType:@"com.apple.shortcuts.workflow-file"] proposedFilename:[self fileName]];
                                                         if (fileRep) {
+                                                            WFSecurityInfoF("Signed Shortcut Data Extracted Successfully with %zd entries",archiveEntries);
                                                             /* Signed Shortcut Data Extracted Successfully */
                                                             comp(fileRep, options, icId, nil);
                                                             AAArchiveStreamClose(decodeStream);
                                                             AAByteStreamClose(decryptionInputStream);
                                                         } else {
                                                             /* Could not find the main shortcut Shortcut.wflow file in the archive */
+                                                            WFSecurityError("Could not find the main shortcut Shortcut.wflow file in the archive");
                                                             comp(nil,0,nil,WFShortcutPackageFileInvalidShortcutFileError());
                                                         }
                                                     } else {
+                                                        WFSecurityErrorF("Failed to extract signed shortcut data with %{public}zd entries",archiveEntries);
                                                         comp(nil,0,nil,WFShortcutPackageFileFailedToExtractShortcutFileError());
                                                     }
                                                 } else {
