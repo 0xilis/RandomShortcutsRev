@@ -45,11 +45,12 @@
     return [self validateWithSigningMethod:arg0 iCloudIdentifier:nil error:err];
 }
 -(SecKeyRef)copyPublicKey {
- if ([[self signingCertificateChain]count]) {
-  return [[[self signingCertificateChain]firstObject]copyPublicKey];
- } else {
-  return [self signingPublicKey];
- }
+    if ([[self signingCertificateChain]count]) {
+        WFShortcutSigningCertificate *cert = [[self signingCertificateChain]firstObject];
+        return [cert copyPublicKey];
+    } else {
+        return (SecKeyRef)CFRetain([self signingPublicKey]);
+    }
 }
 -(instancetype)initWithSigningCertificateChain:(NSArray *)signingChain {
     self = [super init];
@@ -90,36 +91,40 @@
         }
     }
 }
-/* This is an awful decomp of the iCloud verification I attempted maybe about 6-12(?) months back when I was much less skilled. Ignore this... */
--(BOOL)validateSigningCertificateChainWithICloudIdentifier:(*id)arg0 error:(*id)arg1 {
- //log
- NSArray *signingCertificateChain = [self signingCertificateChain];
- //FYI: This part of the method is NOT CORRECT at all bc i have no idea how if_map works lol sorry
- NSArray* certificates = [signingCertificateChain if_map:^{
-  [signingCertificateChain certificate]; //WFShortcutSigningCertificate
- }];
- 
- //this part im still iffy on but its definitely more accurate than above
- CFArrayRef signingCertificateChainRef = (__bridge CFArrayRef)signingCertificateChain;
- SecPolicyRef policy = SecPolicyCreateRevocation(kSecRevocationUseAnyAvailableMethod);
- SecTrustRef trust;
- OSStatus status = SecTrustCreateWithCertificates(signingCertificateChainRef, policy, &trust);
- if ((status) || (trust)) {
-  CFStringRef commonName = arg0;
-  SecCertificateRef leafCert = certificates[0];
-  if (commonName) {
-   SecCertificateCopyCommonName(leafCert, &commonName);
-  }
-  if (!SecTrustEvaluateWithError(trust, nil)) {
-   //error
-  }
-  if (!SecCertificateCopyExtensionValue(leafCert, @"1.2.840.113635.100.18.1", nil)) {
-   //error
-  }
-  //Shortcut Signing Certificate Chain Validated Successfully
-  //CFRelease the stuff too lazy to add
-  return YES;
- }
+-(BOOL)validateSigningCertificateChainWithICloudIdentifier:(NSString **)iCloudId error:(NSError **)err {
+    /* TODO: Implement errs (really just WFShortcutSigningContextSigningCertificateChainFailureError() ) */
+    WFSecurityLog("Validating Shortcut Signing Certificate Chain");
+    NSArray <WFShortcutSigningCertificate *>* signingCertificateChain = [self signingCertificateChain];
+    /* if_map is from IntentsFoundation.framework */
+    NSArray* certificates = [signingCertificateChain if_map:^(WFShortcutSigningCertificate *item){
+      [item certificate]; //WFShortcutSigningCertificate
+    }];
+    SecPolicyRef policy = SecPolicyCreateRevocation(kSecRevocationUseAnyAvailableMethod);
+    SecTrustRef trust = 0;
+    OSStatus res = SecTrustCreateWithCertificates((__bridge CFArrayRef)certificates, policy, &trust);
+    if (res == 0 || (res != 0 && !trust)) {
+        SecCertificateRef root = (__bridge SecCertificateRef)(certificates[0]);
+        if (iCloudId) {
+            CFStringRef rootCertName = 0;
+            SecCertificateCopyCommonName(root, &rootCertName);
+            *iCloudId = (__bridge NSString *)rootCertName;
+        }
+        CFErrorRef evaluateErr = 0;
+        bool isValid = SecTrustEvaluateWithError(trust, &evaluateErr);
+        if (isValid) {
+            if (SecCertificateCopyExtensionValue(root, @"1.2.840.113635.100.18.1", 0)) {
+                WFSecurityInfo("Shortcut Signing Certificate Chain Validated Successfully");
+                return YES;
+            } else {
+                WFSecurityErrorF("Unrecognized Shortcut Signing Certificate: %@",root);
+            }
+        } else {
+            WFSecurityErrorF("Failed to Evaluate Shortcut Signing Certificate Chain: %@",certificates);
+        }
+    } else {
+        WFSecurityErrorF("Validating Shortcut Signing Certificate Chain Failed: %@",certificates)
+    }
+    return NO;
 }
 static __attribute__((always_inline)) BOOL WFAppleIDVerifyCertificateChain(NSArray *certificates) {
     /* TODO: While logs are implemented, NSErrors are not implemented ATM. */
