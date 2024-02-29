@@ -18,24 +18,24 @@
     return commonName;
 }
 -(SecKeyRef)copyPublicKey {
- return SecCertificateCopyKey([self certificate]);
+    return SecCertificateCopyKey([self certificate]);
 }
 -(NSData*)generateAuthData {
- return (__bridge NSData*)SecCertificateCopyData([self certificate]);
+    return (__bridge NSData*)SecCertificateCopyData([self certificate]);
 }
--(id)initWithCertificate:(SecCertificateRef)cert {
- self = [super init];
- if (self) {
-  _certificate = cert;
- }
- return self;
+-(instancetype)initWithCertificate:(SecCertificateRef)cert {
+    self = [super init];
+    if (self) {
+        _certificate = (SecCertificateRef)CFRetain(cert);
+    }
+    return self;
 }
--(id)initWithCertificateData:(NSData *)data {
- SecCertificateRef cert = SecCertificateCreateWithData(0, (__bridge CFDataRef)data);
- if (cert) {
-  return [self initWithCertificate:cert];
- }
- return 0;
+-(instancetype)initWithCertificateData:(NSData *)data {
+    SecCertificateRef cert = SecCertificateCreateWithData(0, (__bridge CFDataRef)data);
+    if (cert) {
+        return [self initWithCertificate:cert];
+    }
+    return 0;
 }
 
 @end
