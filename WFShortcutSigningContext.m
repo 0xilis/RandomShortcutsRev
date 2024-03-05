@@ -215,7 +215,7 @@ static __attribute__((always_inline)) BOOL WFAppleIDVerifyCertificateChain(NSArr
     NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:authData options:0 format:0 error:nil];
     if (dict && [dict isKindOfClass:[NSDictionary class]]) {
         NSArray *signingCertChain = dict[@"SigningCertificateChain"];
-        if (signingCertChain && [dict isKindOfClass:[NSArray class]]) {
+        if (signingCertChain && [signingCertChain isKindOfClass:[NSArray class]]) {
             NSArray *compactMapSigningCertChain = [signingCertChain if_compactMap:^(NSData *data){
                 return [[WFShortcutSigningCertificate alloc]initWithCertificateData:data];
             }];
