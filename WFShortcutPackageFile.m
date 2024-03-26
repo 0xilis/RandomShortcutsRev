@@ -174,25 +174,6 @@
     }
     return fileRep;
 }
--(NSURL *)generateDirectoryStructureInDirectory:(NSURL *)dir error:(NSError ** _Nullable)err {
-    NSURL *returnURL;
-    if ([self shortcutData]) {
-        NSURL *url = [dir URLByAppendingPathComponent:[self directoryName]];
-        returnURL = nil;
-        BOOL didSucceed = [[self fileManager] createDirectoryAtURL:url withIntermediateDirectories:NO attributes:nil error:err];
-        if (didSucceed) {
-            NSURL *writeToURL = [url URLByAppendingPathComponent:@"Shortcut.wflow"];
-            [[self shortcutData]writeToURL:writeToURL atomically:YES];
-            returnURL = url;
-        }
-    } else {
-        if (err) {
-            *err = WFShortcutPackageFileFailedToSignShortcutFileError();
-        }
-        returnURL = nil;
-    }
-    return returnURL;
-}
 -(void)extractShortcutFileRepresentationWithSigningMethod:(id)signingMethod error:(NSError **)err {
     [self extractShortcutFileRepresentationWithSigningMethod:signingMethod iCloudIdentifier:0 error:err];
     return;
