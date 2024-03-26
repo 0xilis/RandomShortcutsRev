@@ -69,6 +69,9 @@
 #ifndef COMPRESSION_LZFSE
 #define COMPRESSION_LZFSE 0x801
 #endif
+#ifndef AEA_PROFILE__HKDF_SHA256_HMAC__NONE__ECDSA_P256
+#define AEA_PROFILE__HKDF_SHA256_HMAC__NONE__ECDSA_P256 0
+#endif
 
 -(WFFileRepresentation *)generateSignedShortcutFileRepresentationWithPrivateKey:(SecKeyRef)daKey signingContext:(WFShortcutSigningContext *)signingContext error:(NSError**)err {
     /*
@@ -85,7 +88,7 @@
     if (authData) {
         NSURL *url = [self generateDirectoryStructureInDirectory:[self temporaryWorkingDirectoryURL] error:err];
         if (url) {
-            AEAContext context = AEAContextCreateWithProfile(0);
+            AEAContext context = AEAContextCreateWithProfile(AEA_PROFILE__HKDF_SHA256_HMAC__NONE__ECDSA_P256);
             if (context) {
                 if (AEAContextSetFieldUInt(context, AEA_CONTEXT_FIELD_COMPRESSION_ALGORITHM, COMPRESSION_LZFSE) == 0) {
                     CFErrorRef cferr = 0;
@@ -238,8 +241,7 @@
                                                     ssize_t archiveEntries = AAArchiveStreamProcess(decodeStream, archiveStream, nil, nil, 0, 0);
                                                     /* archiveEntries will return a negative error code if failure */
                                                     if ((archiveEntries >= 0) && (AAArchiveStreamClose(archiveStream) >= 0)) {
-                                                        [daURL URLByAppendingPathComponent:@"Shortcut.wflow"];
-                                                        WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:daURL options:0x3 ofType:[WFFileType typeWithUTType:@"com.apple.shortcuts.workflow-file"] proposedFilename:[self fileName]];
+                                                        WFFileRepresentation *fileRep = [WFFileRepresentation fileWithURL:[daURL URLByAppendingPathComponent:@"Shortcut.wflow"]; options:0x3 ofType:[WFFileType typeWithUTType:@"com.apple.shortcuts.workflow-file"] proposedFilename:[self fileName]];
                                                         if (fileRep) {
                                                             WFSecurityInfoF("Signed Shortcut Data Extracted Successfully with %zd entries",archiveEntries);
                                                             /* Signed Shortcut Data Extracted Successfully */
